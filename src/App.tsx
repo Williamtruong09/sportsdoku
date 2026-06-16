@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { Analytics } from '@vercel/analytics/react';
 import type { Sport, GameState, Player, Puzzle } from './types';
 import { SPORT_CONFIGS } from './types';
 import { playerSatisfiesCriterion, getValidPlayersForCell } from './data';
@@ -245,6 +246,7 @@ export default function App() {
           </div>
         </div>
       )}
+      <Analytics />
     </div>
   );
 }
