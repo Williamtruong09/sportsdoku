@@ -134,7 +134,7 @@ export default function App() {
   const sportCfg = SPORT_CONFIGS[sport];
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col" style={{ background: '#000' }}>
       <Header
         guessesRemaining={gameState.guessesRemaining}
         date={gameState.puzzle.date}
@@ -143,24 +143,28 @@ export default function App() {
         lastGuessWasWrong={lastGuessWasWrong}
       />
 
-      <main className="flex-1 flex flex-col items-center gap-4 py-4 px-2">
-        <SportSelector selected={sport} onChange={handleSportChange} />
+      <SportSelector selected={sport} onChange={handleSportChange} />
 
+      <main className="flex-1 flex flex-col items-center gap-4 py-4 px-2">
         <div className="w-full max-w-lg">
-          <div className="text-center mb-3">
-            <div className={`text-xs font-semibold uppercase tracking-widest ${sportCfg.textClass}`}>
-              {sportCfg.emoji} {sportCfg.name} {sport === 'challenge' ? 'Challenge' : 'Daily Puzzle'}
+          <div className="flex items-center justify-between px-2 mb-2">
+            <div
+              className={`font-display font-bold uppercase tracking-widest ${sportCfg.textClass}`}
+              style={{ fontSize: 11 }}
+            >
+              {sportCfg.emoji} {sportCfg.name} {sport === 'challenge' ? 'Challenge' : 'Daily'}
             </div>
-            <div className="flex items-center justify-center gap-3 mt-1">
-              <span className="text-xs text-gray-500">
-                Score: <span className="text-white font-bold">{gameState.score}</span>
+            <div className="flex items-center gap-3">
+              <span className="font-pixel text-orange-400" style={{ fontSize: 8, textShadow: '0 0 8px #f97316' }}>
+                {String(gameState.score).padStart(5, '0')}
               </span>
               {sport === 'challenge' && gameState.status === 'playing' && (
                 <button
                   onClick={handleShuffle}
-                  className="text-xs text-pink-400 hover:text-pink-300 font-semibold transition-colors"
+                  className="font-display font-bold uppercase tracking-widest text-pink-400 hover:text-pink-300 transition-colors"
+                  style={{ fontSize: 11 }}
                 >
-                  🎲 New Puzzle
+                  🎲 Shuffle
                 </button>
               )}
             </div>
@@ -168,10 +172,8 @@ export default function App() {
           <Grid state={gameState} onCellClick={handleCellClick} />
         </div>
 
-        <p className="text-xs text-gray-600 text-center max-w-xs">
-          Click a cell and guess a player matching both criteria.
-          Wrong guesses cost a life — you have <span className="text-gray-400 font-semibold">{gameState.guessesRemaining} ❤️</span> remaining.
-          Each player can only be used once.
+        <p className="font-display uppercase tracking-wider text-center max-w-xs" style={{ fontSize: 10, color: '#374151' }}>
+          Wrong guesses cost a life · each player used once
         </p>
       </main>
 
@@ -203,32 +205,37 @@ export default function App() {
       {/* Help modal */}
       {showHelp && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
           onClick={e => e.target === e.currentTarget && setShowHelp(false)}
         >
-          <div className="w-full max-w-sm bg-gray-900 rounded-2xl border border-gray-700 p-6 animate-fade-in">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-black">How to Play</h2>
-              <button
-                onClick={() => setShowHelp(false)}
-                className="text-gray-500 hover:text-white text-2xl leading-none"
+          <div
+            className="w-full max-w-sm animate-fade-in p-6"
+            style={{ background: '#0d0d0d', border: '1px solid #2a2a2a', borderRadius: 4 }}
+          >
+            <div className="flex justify-between items-center mb-5">
+              <h2
+                className="font-display font-black uppercase tracking-widest text-white"
+                style={{ fontSize: 20, letterSpacing: '0.12em' }}
               >
+                How to Play
+              </h2>
+              <button onClick={() => setShowHelp(false)} className="text-gray-600 hover:text-white text-2xl leading-none">
                 ×
               </button>
             </div>
-            <ol className="space-y-3 text-sm text-gray-300 list-decimal list-inside">
-              <li>Choose a sport from the tabs above the grid.</li>
-              <li>The 3×3 grid has <strong>row</strong> and <strong>column</strong> criteria (teams, awards, countries, positions).</li>
-              <li>Click any cell and type a player's name who satisfies <em>both</em> that row's and column's criteria.</li>
-              <li>You have <strong>3 lives ❤️</strong> — only wrong guesses cost a life. Correct guesses are free!</li>
-              <li>Each player can only be used <strong>once</strong> across all cells.</li>
+            <ol className="space-y-3 text-gray-400 list-decimal list-inside" style={{ fontSize: 13 }}>
+              <li>Pick a sport from the tab bar.</li>
+              <li>The 3×3 grid has row and column criteria — teams, awards, nationalities, positions.</li>
+              <li>Click a cell and type a player who satisfies <strong className="text-white">both</strong> the row and column.</li>
+              <li>You have <strong className="text-white">3 lives</strong> — only wrong guesses cost one. Correct guesses are free.</li>
+              <li>Each player can only be used <strong className="text-white">once</strong>.</li>
               <li>Fill all 9 cells correctly to win!</li>
             </ol>
-            <div className="mt-5 pt-4 border-t border-gray-800 grid grid-cols-7 gap-2 text-center text-xs text-gray-500">
+            <div className="mt-5 pt-4 grid grid-cols-7 gap-1 text-center" style={{ borderTop: '1px solid #1f1f1f' }}>
               {(['nba', 'nfl', 'mlb', 'nhl', 'soccer', 'mixed', 'challenge'] as Sport[]).map(s => (
-                <div key={s}>
-                  <div className="text-xl">{SPORT_CONFIGS[s].emoji}</div>
-                  <div>{SPORT_CONFIGS[s].name}</div>
+                <div key={s} className="text-gray-600" style={{ fontSize: 10 }}>
+                  <div style={{ fontSize: 18 }}>{SPORT_CONFIGS[s].emoji}</div>
+                  <div className="font-display uppercase tracking-wider" style={{ fontSize: 8 }}>{SPORT_CONFIGS[s].name}</div>
                 </div>
               ))}
             </div>

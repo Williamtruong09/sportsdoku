@@ -15,30 +15,33 @@ export function Grid({ state, onCellClick }: Props) {
   return (
     <div className="w-full max-w-lg mx-auto px-2">
       <div
-        className="grid gap-1.5"
-        style={{ gridTemplateColumns: '80px repeat(3, 1fr)' }}
+        className="grid"
+        style={{ gridTemplateColumns: '72px repeat(3, 1fr)', gap: 2 }}
       >
         {/* Top-left corner */}
-        <div className={`flex items-center justify-center rounded-lg p-1 text-xl ${sport.textClass}`}>
+        <div
+          className="flex items-center justify-center"
+          style={{ background: '#000', fontSize: 22 }}
+        >
           {sport.emoji}
         </div>
 
         {/* Column headers */}
         {puzzle.cols.map(col => (
-          <div key={col.id} className="header-cell bg-gray-900 rounded-lg min-h-[56px]">
+          <div key={col.id} className="header-cell" style={{ minHeight: 52 }}>
             <div>
-              {col.emoji && <div className="text-base mb-0.5">{col.emoji}</div>}
+              {col.emoji && <div style={{ fontSize: 13, marginBottom: 2 }}>{col.emoji}</div>}
               <div>{col.label}</div>
             </div>
           </div>
         ))}
 
-        {/* Rows (row header + 3 cells per row) */}
+        {/* Rows */}
         {puzzle.rows.map((row, rowIdx) => (
           <div key={row.id} className="contents">
-            <div className="header-cell bg-gray-900 rounded-lg min-h-[80px]">
+            <div className="header-cell" style={{ minHeight: 80 }}>
               <div>
-                {row.emoji && <div className="text-base mb-0.5">{row.emoji}</div>}
+                {row.emoji && <div style={{ fontSize: 13, marginBottom: 2 }}>{row.emoji}</div>}
                 <div>{row.label}</div>
               </div>
             </div>

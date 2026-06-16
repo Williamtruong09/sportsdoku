@@ -7,46 +7,62 @@ interface Props {
 }
 
 export function Header({ guessesRemaining, date, onHelp, onDonate, lastGuessWasWrong }: Props) {
-  const hearts = Array.from({ length: 3 }, (_, i) => i < guessesRemaining);
+  const lives = Array.from({ length: 3 }, (_, i) => i < guessesRemaining);
 
   return (
-    <header className="relative flex items-center justify-between px-4 py-3 border-b border-gray-800">
-      <div className="flex gap-1 z-10">
+    <header style={{ background: '#000', borderBottom: '1px solid #1f1f1f' }} className="px-4 py-3">
+      <div className="max-w-lg mx-auto flex items-center justify-between">
+
+        {/* Donate */}
         <button
           onClick={onDonate}
-          className="flex items-center gap-1 px-2 h-8 rounded-full hover:bg-gray-800 transition-colors text-sm font-semibold text-amber-400"
-          aria-label="Support the developer"
+          className="text-amber-400 hover:text-amber-300 transition-colors text-xs font-bold uppercase tracking-widest"
+          style={{ fontFamily: '"Barlow Condensed", system-ui, sans-serif', letterSpacing: '0.1em' }}
         >
-          🐾 <span className="text-xs">Dog Treat Fund</span>
+          🐾 Dog Treat Fund
         </button>
-      </div>
 
-      <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-        <h1 className="text-xl font-black tracking-tight">
-          <span className="text-white">Spor</span>
-          <span className="text-orange-400">doku</span>
-        </h1>
-        <p className="text-xs text-gray-500">{date}</p>
-      </div>
-
-      <div className="flex items-center gap-2 z-10">
-        <div className="flex gap-1" title={`${guessesRemaining} of 3 lives remaining`}>
-          {hearts.map((alive, i) => (
+        {/* Logo — absolute center */}
+        <div className="absolute left-1/2 -translate-x-1/2 text-center">
+          <div
+            className="font-display font-black uppercase leading-none"
+            style={{ fontSize: '22px', letterSpacing: '0.15em' }}
+          >
+            <span className="text-white">SPOR</span>
             <span
-              key={i}
-              className={`text-xl transition-all duration-300 ${alive ? 'opacity-100' : 'opacity-20 grayscale'} ${!alive && lastGuessWasWrong && i === guessesRemaining ? 'animate-heart-break' : ''}`}
+              className="text-orange-400"
+              style={{ animation: 'neonFlicker 6s infinite', textShadow: '0 0 8px #f97316, 0 0 20px #f97316, 0 0 40px #ea580c' }}
             >
-              ❤️
+              DOKU
             </span>
-          ))}
+          </div>
+          <div className="text-gray-600 text-[10px] uppercase tracking-widest mt-0.5">
+            {date}
+          </div>
         </div>
-        <button
-          onClick={onHelp}
-          className="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-800 transition-colors text-sm font-bold"
-          aria-label="Help"
-        >
-          ?
-        </button>
+
+        {/* Lives + help */}
+        <div className="flex items-center gap-3">
+          <div className="flex gap-1 items-center" title={`${guessesRemaining} of 3 lives remaining`}>
+            {lives.map((alive, i) => (
+              <span
+                key={i}
+                className={`text-xl transition-all duration-300 ${alive ? 'opacity-100' : 'opacity-20 grayscale'} ${!alive && lastGuessWasWrong && i === guessesRemaining ? 'animate-heart-break' : ''}`}
+              >
+                ❤️
+              </span>
+            ))}
+          </div>
+          <button
+            onClick={onHelp}
+            className="text-gray-500 hover:text-white transition-colors font-bold"
+            style={{ fontFamily: '"Barlow Condensed", system-ui, sans-serif', fontSize: 16 }}
+            aria-label="Help"
+          >
+            ?
+          </button>
+        </div>
+
       </div>
     </header>
   );

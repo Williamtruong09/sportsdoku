@@ -8,50 +8,119 @@
   }
 
   body {
-    @apply bg-gray-950 text-gray-100 min-h-screen font-sans;
+    @apply text-gray-100 min-h-screen;
+    font-family: 'Barlow Condensed', system-ui, sans-serif;
+    background-color: #000;
     -webkit-font-smoothing: antialiased;
+  }
+
+  /* Scanline overlay */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 3px,
+      rgba(0, 0, 0, 0.08) 3px,
+      rgba(0, 0, 0, 0.08) 4px
+    );
+    pointer-events: none;
+    z-index: 9999;
   }
 }
 
 @layer components {
   .cell-btn {
     @apply relative flex flex-col items-center justify-center w-full h-full
-           border-2 border-gray-700 rounded-lg cursor-pointer
-           transition-all duration-150 select-none
-           text-xs font-semibold text-center leading-tight
-           hover:border-gray-500 hover:bg-gray-800/60
-           focus:outline-none focus:ring-2 focus:ring-white/30;
+           cursor-pointer transition-all duration-150 select-none
+           text-xs font-bold text-center leading-tight uppercase tracking-wide
+           focus:outline-none;
     min-height: 80px;
+    background: #0d0d0d;
+    border: 1px solid #2a2a2a;
+    border-radius: 2px;
+  }
+
+  .cell-btn:hover:not(:disabled) {
+    border-color: rgba(255,255,255,0.25);
+    background: #161616;
   }
 
   .cell-btn.correct {
-    @apply border-green-500 bg-green-900/40 text-green-200 cursor-default;
+    background: #001a08;
+    border-color: #00ff44;
+    color: #00ff44;
+    cursor: default;
+    box-shadow: 0 0 10px rgba(0,255,68,0.3), inset 0 0 16px rgba(0,255,68,0.06);
   }
 
   .cell-btn.selected {
-    @apply border-white/60 bg-gray-800;
+    border-color: #00e5ff;
+    background: #001a1f;
+    box-shadow: 0 0 12px rgba(0,229,255,0.4), 0 0 24px rgba(0,229,255,0.15);
+    animation: selectedPulse 1.5s ease-in-out infinite;
   }
 
   .cell-btn.shake {
     @apply animate-shake;
+    border-color: #ff2222;
+    box-shadow: 0 0 12px rgba(255,34,34,0.5);
   }
 
   .header-cell {
-    @apply flex items-center justify-center text-center text-xs font-bold
-           uppercase tracking-wide text-gray-400 p-2 leading-tight;
+    @apply flex items-center justify-center text-center p-2 leading-tight;
+    font-family: 'Barlow Condensed', system-ui, sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: #9ca3af;
+    background: #0d0d0d;
+    border: 1px solid #1f1f1f;
+    border-radius: 2px;
   }
 
   .sport-btn {
-    @apply px-3 py-1.5 rounded-full text-sm font-semibold border-2 transition-all duration-150
-           focus:outline-none focus:ring-2 focus:ring-white/30;
+    @apply px-4 py-2.5 text-sm font-bold uppercase tracking-wider
+           transition-all duration-150 relative whitespace-nowrap
+           focus:outline-none;
+    font-family: 'Barlow Condensed', system-ui, sans-serif;
+    letter-spacing: 0.08em;
   }
 
   .sport-btn.active {
     @apply text-white;
   }
 
+  .sport-btn.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: white;
+  }
+
   .sport-btn.inactive {
-    @apply border-gray-700 text-gray-400 hover:border-gray-500 hover:text-gray-200;
+    @apply text-gray-500 hover:text-gray-300;
+  }
+}
+
+/* Arcade keyframes */
+@keyframes selectedPulse {
+  0%, 100% { box-shadow: 0 0 10px rgba(0,229,255,0.4), 0 0 20px rgba(0,229,255,0.15); }
+  50%       { box-shadow: 0 0 18px rgba(0,229,255,0.7), 0 0 36px rgba(0,229,255,0.25); }
+}
+
+@keyframes neonFlicker {
+  0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% {
+    text-shadow: 0 0 8px #f97316, 0 0 20px #f97316, 0 0 40px #ea580c;
+  }
+  20%, 24%, 55% {
+    text-shadow: none;
   }
 }
 
@@ -81,12 +150,22 @@
 
 /* Scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
+  width: 4px;
+  height: 4px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #374151;
-  border-radius: 3px;
+  background: #2a2a2a;
+  border-radius: 2px;
+}
+
+/* Hide scrollbar for sport selector on mobile */
+.scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
 }

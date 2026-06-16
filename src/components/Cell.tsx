@@ -24,7 +24,7 @@ export function Cell({ cell, isSelected, isGameOver, onClick }: Props) {
     cell.isCorrect ? 'correct' : '',
     isSelected && !cell.isCorrect ? 'selected' : '',
     shake ? 'shake' : '',
-    isGameOver && !cell.isCorrect ? 'opacity-50 cursor-default' : '',
+    isGameOver && !cell.isCorrect ? 'opacity-40 cursor-default' : '',
   ]
     .filter(Boolean)
     .join(' ');
@@ -37,12 +37,16 @@ export function Cell({ cell, isSelected, isGameOver, onClick }: Props) {
       aria-label={cell.playerName ?? 'Empty cell'}
     >
       {cell.isCorrect ? (
-        <div className="animate-pop-in px-1 text-center">
-          <div className="text-lg mb-0.5">✅</div>
-          <div className="text-xs font-bold leading-tight">{cell.playerName}</div>
+        <div className="animate-pop-in px-2 text-center">
+          <div
+            className="font-display font-bold leading-tight uppercase"
+            style={{ fontSize: 11, letterSpacing: '0.04em' }}
+          >
+            {cell.playerName}
+          </div>
         </div>
       ) : (
-        <span className="text-2xl text-gray-600 group-hover:text-gray-400">+</span>
+        <span style={{ fontSize: 20, color: '#2a2a2a', fontWeight: 300 }}>+</span>
       )}
     </button>
   );

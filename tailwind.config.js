@@ -3,6 +3,10 @@ export default {
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
   theme: {
     extend: {
+      fontFamily: {
+        display: ['"Barlow Condensed"', 'system-ui', 'sans-serif'],
+        pixel: ['"Press Start 2P"', 'monospace'],
+      },
       colors: {
         nba: '#f97316',
         nfl: '#3b82f6',
