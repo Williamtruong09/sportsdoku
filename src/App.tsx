@@ -9,6 +9,7 @@ import { Grid } from './components/Grid';
 import { PlayerSearch } from './components/PlayerSearch';
 import { GameOver } from './components/GameOver';
 import { DonatePage } from './components/DonatePage';
+import { Analytics } from '@vercel/analytics/react';
 
 const STORAGE_KEY = 'sportsdoku-state-v1';
 
