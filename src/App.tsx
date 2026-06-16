@@ -11,42 +11,13 @@ import { GameOver } from './components/GameOver';
 import { DonatePage } from './components/DonatePage';
 import { Analytics } from '@vercel/analytics/react';
 
-const STORAGE_KEY = 'sportsdoku-state-v1';
-
-function loadSavedState(sport: Sport, date: string): GameState | null {
-  try {
-    const raw = localStorage.getItem(`${STORAGE_KEY}-${sport}-${date}`);
-    if (!raw) return null;
-    const state = JSON.parse(raw) as GameState;
-    // Backfill score for saves created before scoring was added
-    if (typeof state.score !== 'number') state.score = 0;
-    return state;
-  } catch {
-    return null;
-  }
-}
-
-function saveState(state: GameState) {
-  if (state.puzzle.sport === 'challenge') return;
-  try {
-    localStorage.setItem(
-      `${STORAGE_KEY}-${state.puzzle.sport}-${state.puzzle.date}`,
-      JSON.stringify(state)
-    );
-  } catch {
-    // ignore storage errors
-  }
-}
 
 function buildInitialState(sport: Sport): GameState {
   if (sport === 'challenge') {
     const puzzle = generatePuzzle('challenge', `challenge-${Date.now()}`);
     return createInitialGameState({ ...puzzle, date: getTodayString() });
   }
-  const date = getTodayString();
-  const saved = loadSavedState(sport, date);
-  if (saved) return saved;
-  const puzzle = generatePuzzle(sport, date);
+  const puzzle = generatePuzzle(sport, getTodayString());
   return createInitialGameState(puzzle);
 }
 
@@ -61,7 +32,6 @@ export default function App() {
   const [lastGuessWasWrong, setLastGuessWasWrong] = useState(false);
 
   function updateState(next: GameState) {
-    saveState(next);
     setGameState(next);
   }
 
