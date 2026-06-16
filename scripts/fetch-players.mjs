@@ -461,50 +461,49 @@ async function fetchNBA() {
     seasons.push(`${y}-${String(y + 1).slice(-2)}`);
   }
 
-  // 1. Scoring leaders per season — top 25 captures most notable players
-  //    Rank 1 each season = scoring title winner
-  console.log(`  Fetching scoring leaders per season (${seasons.length} seasons)...`);
-  let nbaSeasons = 0;
-  for (const season of seasons) {
-    try {
-      const d = await get(
-        `https://stats.nba.com/stats/leagueleaders?LeagueID=00&Season=${season}&SeasonType=Regular+Season&PerMode=PerGame&StatCategory=PTS&Scope=S`,
-        `nba-leaders-${season}`,
-        NBA_HEADERS,
-      );
-      const rs = d.resultSet ?? d.resultSets?.[0];
-      if (!rs) continue;
-      const h = rs.headers;
-      const pidIdx = h.indexOf('PLAYER_ID');
-      const nameIdx = h.indexOf('PLAYER');
-      const teamIdx = h.indexOf('TEAM');
-      const rankIdx = h.indexOf('RANK');
-      if (pidIdx === -1) continue;
+  // Fetch top 25 per season for multiple stat categories
+  // Rank 1 in PTS = Scoring Title; Rank 1 in AST = assists leader
+  const NBA_STAT_CATS = [
+    { cat: 'PTS', label: 'scoring' },
+    { cat: 'AST', label: 'assists' },
+    { cat: 'REB', label: 'rebounds' },
+  ];
+  for (const { cat, label } of NBA_STAT_CATS) {
+    console.log(`  Fetching ${label} leaders per season (${seasons.length} seasons)...`);
+    let nbaSeasons = 0;
+    for (const season of seasons) {
+      try {
+        const d = await get(
+          `https://stats.nba.com/stats/leagueleaders?LeagueID=00&Season=${season}&SeasonType=Regular+Season&PerMode=PerGame&StatCategory=${cat}&Scope=S`,
+          `nba-leaders-${cat}-${season}`,
+          NBA_HEADERS,
+        );
+        const rs = d.resultSet ?? d.resultSets?.[0];
+        if (!rs) continue;
+        const h = rs.headers;
+        const pidIdx = h.indexOf('PLAYER_ID');
+        const nameIdx = h.indexOf('PLAYER');
+        const teamIdx = h.indexOf('TEAM');
+        const rankIdx = h.indexOf('RANK');
+        if (pidIdx === -1) continue;
 
-      for (const row of (rs.rowSet ?? []).slice(0, 25)) {
-        const pid = String(row[pidIdx]);
-        const name = row[nameIdx] ?? '';
-        const teamAbbr = row[teamIdx] ?? '';
-        if (!pid) continue;
-
-        if (!byId.has(pid)) {
-          byId.set(pid, { name, awards: new Set(), teams: new Set(), positions: [], country: 'USA' });
+        for (const row of (rs.rowSet ?? []).slice(0, 25)) {
+          const pid = String(row[pidIdx]);
+          const name = row[nameIdx] ?? '';
+          const teamAbbr = row[teamIdx] ?? '';
+          if (!pid) continue;
+          if (!byId.has(pid)) {
+            byId.set(pid, { name, awards: new Set(), teams: new Set(), positions: [], country: 'USA' });
+          }
+          const p = byId.get(pid);
+          const teamName = NBA_TEAM_ABBREVS[teamAbbr];
+          if (teamName) p.teams.add(teamName);
+          if (rankIdx !== -1 && row[rankIdx] === 1 && cat === 'PTS') p.awards.add('Scoring Title');
         }
-        const p = byId.get(pid);
-        const teamName = NBA_TEAM_ABBREVS[teamAbbr];
-        if (teamName) p.teams.add(teamName);
-
-        // Rank 1 = scoring title
-        if (rankIdx !== -1 && row[rankIdx] === 1) p.awards.add('Scoring Title');
-      }
-      nbaSeasons++;
-    } catch { /* skip individual season failures */ }
-  }
-  console.log(`  Got scoring leaders from ${nbaSeasons} seasons, ${byId.size} unique players`);
-
-  if (byId.size === 0) {
-    console.warn('  ⚠ stats.nba.com blocked all requests. Keeping existing player data.');
-    return null;
+        nbaSeasons++;
+      } catch { /* skip individual season failures */ }
+    }
+    console.log(`  Got ${label} leaders from ${nbaSeasons} seasons, ${byId.size} unique players total`);
   }
 
   // 2. Enrich each player with bio + awards + career teams
@@ -625,12 +624,12 @@ const ESPN_NFL_TEAM_IDS = {
 
 async function fetchNFL() {
   console.log('\n=== NFL ===');
-  const byId = new Map(); // pid → { name, awards, teams, positions, athleteRef }
+  const byId = new Map(); // pid → { name, awards, teams, positions }
 
-  // Season-specific awards endpoint has real winners; top-level /awards endpoint is empty
   const years = [];
   for (let y = 1990; y <= 2023; y++) years.push(y);
 
+  // 1. Award winners — MVP, Super Bowl MVP, DPOY, Offensive ROY, All-Pro, Pro Bowl
   console.log(`  Fetching NFL season awards (${years.length} seasons)...`);
   let seasonsDone = 0;
   for (const year of years) {
@@ -647,24 +646,19 @@ async function fetchNFL() {
           const ad = await get(awardRef, `nfl-season-award-${year}-${awardId}`);
           const ourAward = mapNFLAward(ad.name ?? '');
           if (!ourAward) continue;
-
           for (const winner of ad.winners ?? []) {
             const athleteRef = winner.athlete?.$ref;
             const teamRef = winner.team?.$ref;
             if (!athleteRef) continue;
-
             const pid = athleteRef.split('/athletes/')[1]?.split('?')[0];
             if (!pid) continue;
-
             const teamId = parseInt(teamRef?.split('/teams/')[1]?.split('?')[0] ?? '0');
             const teamName = ESPN_NFL_TEAM_IDS[teamId];
-
             if (!byId.has(pid)) {
-              byId.set(pid, { name: '', awards: new Set(), teams: new Set(), positions: [], athleteRef });
+              byId.set(pid, { name: '', awards: new Set(), teams: new Set(), positions: [] });
             }
             const p = byId.get(pid);
             p.awards.add(ourAward);
-            // Major award winners are almost always Pro Bowlers / All-Pro
             if (['MVP', 'Super Bowl MVP', 'DPOY', 'Offensive ROY'].includes(ourAward)) {
               p.awards.add('Pro Bowl');
               p.awards.add('All-Pro');
@@ -678,32 +672,66 @@ async function fetchNFL() {
       console.warn(`  ⚠ NFL season ${year}: ${e.message}`);
     }
   }
-  console.log(`  Processed ${seasonsDone} seasons, found ${byId.size} award winners`);
+  console.log(`  Processed ${seasonsDone} award seasons, ${byId.size} players so far`);
 
-  // Enrich with bio from the season-specific athlete endpoint (has birthPlace + position)
+  // 2. Stat leaders per season — top 25 in 10 key categories each year
+  //    Gives us notable QBs, RBs, WRs, DBs, pass rushers beyond just award winners
+  const STAT_CATS = [
+    'passingYards', 'rushingYards', 'receivingYards',
+    'totalTackles', 'sacks', 'interceptions',
+    'passingTouchdowns', 'rushingTouchdowns', 'receptions', 'passesDefended',
+  ];
+  console.log(`  Fetching NFL stat leaders (${years.length} seasons × ${STAT_CATS.length} categories)...`);
+  let statSeasonsDone = 0;
+  for (const year of years) {
+    try {
+      const d = await get(
+        `${NFL_BASE}/seasons/${year}/types/2/leaders`,
+        `nfl-stat-leaders-${year}`,
+      );
+      for (const cat of d.categories ?? []) {
+        if (!STAT_CATS.includes(cat.name)) continue;
+        for (const leader of (cat.leaders ?? []).slice(0, 25)) {
+          const athleteRef = leader.athlete?.$ref;
+          const teamRef = leader.team?.$ref;
+          if (!athleteRef) continue;
+          const pid = athleteRef.split('/athletes/')[1]?.split('?')[0];
+          if (!pid) continue;
+          const teamId = parseInt(teamRef?.split('/teams/')[1]?.split('?')[0] ?? '0');
+          const teamName = ESPN_NFL_TEAM_IDS[teamId];
+          if (!byId.has(pid)) {
+            byId.set(pid, { name: '', awards: new Set(), teams: new Set(), positions: [] });
+          }
+          if (teamName) byId.get(pid).teams.add(teamName);
+        }
+      }
+      statSeasonsDone++;
+    } catch (e) {
+      console.warn(`  ⚠ NFL stat leaders ${year}: ${e.message}`);
+    }
+  }
+  console.log(`  Stat leaders done (${statSeasonsDone} seasons), total unique players: ${byId.size}`);
+
+  // 3. Bio enrichment — name, birthPlace.country, position for every player
   const players = [];
   let done = 0;
   for (const [pid, p] of byId) {
     done++;
-    if (done % 50 === 0) console.log(`  Progress: ${done}/${byId.size}`);
+    if (done % 100 === 0) console.log(`  Bio: ${done}/${byId.size}`);
     try {
       const d = await get(
-        p.athleteRef ?? `${NFL_BASE}/athletes/${pid}`,
+        `${NFL_BASE}/athletes/${pid}`,
         `nfl-athlete-${pid}`,
       );
-
       const name = d.fullName ?? d.displayName ?? '';
       if (!name) continue;
       p.name = name;
       p.positions = [d.position?.abbreviation].filter(Boolean);
-
-      // Add teams from athlete's teams array (season-specific refs)
       for (const teamRef of d.teams ?? []) {
         const teamId = parseInt(teamRef.$ref?.split('/teams/')[1]?.split('?')[0] ?? '0');
         const teamName = ESPN_NFL_TEAM_IDS[teamId];
         if (teamName) p.teams.add(teamName);
       }
-
       players.push({
         id: slug(name),
         name,
@@ -769,47 +797,69 @@ async function fetchSoccer() {
   const fdHeaders = { 'X-Auth-Token': FOOTBALL_DATA_KEY };
   const byId = new Map();
 
-  // Fetch top scorers and squads from major leagues
-  const leagueIds = Object.keys(FD_LEAGUES);
-  const currentSeason = 2024;
+  const LEAGUE_IDS = ['PL', 'PD', 'BL1', 'SA', 'FL1']; // major domestic leagues
+  const SEASONS = [2021, 2022, 2023, 2024];
 
-  for (const leagueId of leagueIds) {
+  // 1. Top scorers across multiple seasons (gives us goal-scorers / star attackers)
+  console.log(`  Fetching top scorers (${LEAGUE_IDS.length} leagues × ${SEASONS.length} seasons)...`);
+  for (const leagueId of LEAGUE_IDS) {
     const leagueName = FD_LEAGUES[leagueId];
-    try {
-      // Top scorers give us star players
-      const d = await get(
-        `${FD_BASE}/competitions/${leagueId}/scorers?limit=20&season=${currentSeason}`,
-        `soccer-scorers-${leagueId}-${currentSeason}`,
-        fdHeaders,
-      );
-      for (const entry of d.scorers ?? []) {
-        const p = entry.player;
-        if (!p?.id) continue;
-        const key = String(p.id);
-        if (!byId.has(key)) {
-          byId.set(key, {
-            name: p.name,
-            nationality: p.nationality ?? 'Unknown',
-            awards: new Set(),
-            teams: new Set(),
-            positions: [mapSoccerPos(p.position)].filter(Boolean),
-          });
-        }
-        // Infer award from league
-        if (leagueId !== 'WC' && leagueId !== 'CL') {
+    for (const season of SEASONS) {
+      try {
+        const d = await get(
+          `${FD_BASE}/competitions/${leagueId}/scorers?limit=20&season=${season}`,
+          `soccer-scorers-${leagueId}-${season}`,
+          fdHeaders,
+        );
+        for (const entry of d.scorers ?? []) {
+          const p = entry.player;
+          if (!p?.id) continue;
+          const key = String(p.id);
+          if (!byId.has(key)) {
+            byId.set(key, { name: p.name, nationality: p.nationality ?? 'Unknown', awards: new Set(), teams: new Set(), positions: [mapSoccerPos(p.position)].filter(Boolean) });
+          }
           byId.get(key).awards.add(leagueName);
+          const t = SOCCER_TEAM_NAMES[entry.team?.name] ?? entry.team?.shortName;
+          if (t) byId.get(key).teams.add(t);
         }
-        // Team
-        const t = SOCCER_TEAM_NAMES[entry.team?.name] ?? entry.team?.shortName;
-        if (t) byId.get(key).teams.add(t);
+      } catch (e) {
+        console.warn(`  ⚠ Soccer scorers ${leagueId} ${season}: ${e.message}`);
       }
-      console.log(`  League ${leagueId} scorers: ${(d.scorers ?? []).length}`);
-    } catch (e) {
-      console.warn(`  ⚠ Soccer league ${leagueId}: ${e.message}`);
     }
   }
+  console.log(`  After scorers: ${byId.size} players`);
 
-  // Map nationality to country string
+  // 2. Full team squads — squad data is included inline in the /competitions/{id}/teams response
+  console.log(`  Fetching team squads (inline from competition teams endpoint)...`);
+  for (const leagueId of LEAGUE_IDS) {
+    const leagueName = FD_LEAGUES[leagueId];
+    try {
+      const d = await get(
+        `${FD_BASE}/competitions/${leagueId}/teams?season=2024`,
+        `soccer-teams-${leagueId}-2024`,
+        fdHeaders,
+      );
+      let added = 0;
+      for (const team of d.teams ?? []) {
+        const teamShort = SOCCER_TEAM_NAMES[team.name] ?? team.shortName ?? team.tla;
+        for (const player of team.squad ?? []) {
+          if (!player.id) continue;
+          const key = String(player.id);
+          if (!byId.has(key)) {
+            byId.set(key, { name: player.name, nationality: player.nationality ?? 'Unknown', awards: new Set(), teams: new Set(), positions: [mapSoccerPos(player.position)].filter(Boolean) });
+            added++;
+          }
+          byId.get(key).awards.add(leagueName);
+          if (teamShort) byId.get(key).teams.add(teamShort);
+        }
+      }
+      console.log(`  League ${leagueId}: ${(d.teams ?? []).length} teams, +${added} new players`);
+    } catch (e) {
+      console.warn(`  ⚠ Soccer teams ${leagueId}: ${e.message}`);
+    }
+  }
+  console.log(`  After squads: ${byId.size} total players`);
+
   const players = [...byId.values()].map(p => ({
     id: slug(p.name),
     name: p.name,
