@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import type { Sport, GameState, Player } from './types';
 import { SPORT_CONFIGS } from './types';
-import { playerSatisfiesCriterion } from './data';
+import { playerSatisfiesCriterion, getValidPlayersForCell } from './data';
 import { generatePuzzle, createInitialGameState, getTodayString } from './utils/puzzle';
 import { Header } from './components/Header';
 import { SportSelector } from './components/SportSelector';
@@ -15,13 +15,18 @@ const STORAGE_KEY = 'sportsdoku-state-v1';
 function loadSavedState(sport: Sport, date: string): GameState | null {
   try {
     const raw = localStorage.getItem(`${STORAGE_KEY}-${sport}-${date}`);
-    return raw ? (JSON.parse(raw) as GameState) : null;
+    if (!raw) return null;
+    const state = JSON.parse(raw) as GameState;
+    // Backfill score for saves created before scoring was added
+    if (typeof state.score !== 'number') state.score = 0;
+    return state;
   } catch {
     return null;
   }
 }
 
 function saveState(state: GameState) {
+  if (state.puzzle.sport === 'challenge') return;
   try {
     localStorage.setItem(
       `${STORAGE_KEY}-${state.puzzle.sport}-${state.puzzle.date}`,
@@ -33,6 +38,10 @@ function saveState(state: GameState) {
 }
 
 function buildInitialState(sport: Sport): GameState {
+  if (sport === 'challenge') {
+    const puzzle = generatePuzzle('challenge', `challenge-${Date.now()}`);
+    return createInitialGameState({ ...puzzle, date: getTodayString() });
+  }
   const date = getTodayString();
   const saved = loadSavedState(sport, date);
   if (saved) return saved;
@@ -100,6 +109,10 @@ export default function App() {
       const newStatus =
         allCorrect ? 'won' : newGuesses <= 0 ? 'lost' : 'playing';
 
+      const newScore = isCorrect
+        ? gameState.score + Math.max(10, Math.round(1000 / Math.max(1, getValidPlayersForCell(gameState.puzzle.sport, rowCrit, colCrit).length)))
+        : gameState.score;
+
       const next: GameState = {
         ...gameState,
         cells: newCells,
@@ -107,6 +120,7 @@ export default function App() {
         usedPlayerIds: newUsed,
         selectedCell: isCorrect ? null : gameState.selectedCell,
         status: newStatus,
+        score: newScore,
       };
 
       updateState(next);
@@ -119,6 +133,11 @@ export default function App() {
     const puzzle = generatePuzzle(sport, `${date}-${Date.now()}`);
     const fresh = createInitialGameState(puzzle);
     updateState(fresh);
+  }
+
+  function handleShuffle() {
+    const puzzle = generatePuzzle('challenge', `challenge-${Date.now()}`);
+    setGameState(createInitialGameState({ ...puzzle, date: getTodayString() }));
   }
 
   const { selectedCell, puzzle, status } = gameState;
@@ -137,8 +156,23 @@ export default function App() {
         <SportSelector selected={sport} onChange={handleSportChange} />
 
         <div className="w-full max-w-lg">
-          <div className={`text-center text-xs font-semibold uppercase tracking-widest mb-3 ${sportCfg.textClass}`}>
-            {sportCfg.emoji} {sportCfg.name} Daily Puzzle
+          <div className="text-center mb-3">
+            <div className={`text-xs font-semibold uppercase tracking-widest ${sportCfg.textClass}`}>
+              {sportCfg.emoji} {sportCfg.name} {sport === 'challenge' ? 'Challenge' : 'Daily Puzzle'}
+            </div>
+            <div className="flex items-center justify-center gap-3 mt-1">
+              <span className="text-xs text-gray-500">
+                Score: <span className="text-white font-bold">{gameState.score}</span>
+              </span>
+              {sport === 'challenge' && gameState.status === 'playing' && (
+                <button
+                  onClick={handleShuffle}
+                  className="text-xs text-pink-400 hover:text-pink-300 font-semibold transition-colors"
+                >
+                  🎲 New Puzzle
+                </button>
+              )}
+            </div>
           </div>
           <Grid state={gameState} onCellClick={handleCellClick} />
         </div>
@@ -194,8 +228,8 @@ export default function App() {
               <li>Each player can only be used <strong>once</strong> across all cells.</li>
               <li>Fill all 9 cells correctly to win!</li>
             </ol>
-            <div className="mt-5 pt-4 border-t border-gray-800 grid grid-cols-5 gap-2 text-center text-xs text-gray-500">
-              {(['nba', 'nfl', 'mlb', 'nhl', 'soccer', 'mixed'] as Sport[]).map(s => (
+            <div className="mt-5 pt-4 border-t border-gray-800 grid grid-cols-7 gap-2 text-center text-xs text-gray-500">
+              {(['nba', 'nfl', 'mlb', 'nhl', 'soccer', 'mixed', 'challenge'] as Sport[]).map(s => (
                 <div key={s}>
                   <div className="text-xl">{SPORT_CONFIGS[s].emoji}</div>
                   <div>{SPORT_CONFIGS[s].name}</div>

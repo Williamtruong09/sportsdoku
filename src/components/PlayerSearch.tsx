@@ -118,7 +118,7 @@ export function PlayerSearch({
                 >
                   <span className="font-medium">{player.name}</span>
                   <span className="text-gray-500 ml-2 text-xs">
-                    {sport === 'mixed' ? `${player.sport.toUpperCase()} · ` : ''}{player.teams.slice(-2).join(', ')} · {player.country}
+                    {(sport === 'mixed' || sport === 'challenge') ? `${player.sport.toUpperCase()} · ` : ''}{player.teams.slice(-2).join(', ')} · {player.country}
                   </span>
                 </button>
               </li>

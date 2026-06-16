@@ -1,4 +1,4 @@
-export type Sport = 'nba' | 'nfl' | 'mlb' | 'nhl' | 'soccer' | 'mixed';
+export type Sport = 'nba' | 'nfl' | 'mlb' | 'nhl' | 'soccer' | 'mixed' | 'challenge';
 
 export type CriterionType = 'team' | 'award' | 'country' | 'position' | 'sport';
 
@@ -42,6 +42,7 @@ export interface GameState {
   selectedCell: [number, number] | null;
   usedPlayerIds: string[];
   status: GameStatus;
+  score: number;
 }
 
 export interface SportConfig {
@@ -55,6 +56,15 @@ export interface SportConfig {
 }
 
 export const SPORT_CONFIGS: Record<Sport, SportConfig> = {
+  challenge: {
+    id: 'challenge',
+    name: 'Challenge',
+    emoji: '🎲',
+    color: '#ec4899',
+    bgClass: 'bg-pink-500',
+    textClass: 'text-pink-400',
+    borderClass: 'border-pink-500',
+  },
   mixed: {
     id: 'mixed',
     name: 'Mixed',

@@ -39,7 +39,7 @@ export function DonatePage({ onClose }: Props) {
           <div className="text-sm text-gray-300 space-y-2 leading-relaxed">
             <p>
               Hey! I'm a small independent developer and proud dad of 2 (dogs) who built
-              SportsDoku in my spare time because I love sports and a good daily challenge.
+              Spordoku in my spare time because I love sports and a good daily challenge.
             </p>
             <p className="text-gray-400">
               If you enjoy the game, any donation goes straight to buying my co-developers
@@ -62,7 +62,8 @@ export function DonatePage({ onClose }: Props) {
             href={KOFI_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center justify-center gap-2 w-full py-3 px-4 rounded-xl font-bold text-sm bg-[#FF5E5B] hover:bg-[#e54e4b] text-white transition-colors"
+            className="flex items-center justify-center gap-2 w-full py-3 px-4 rounded-xl font-bold text-sm text-white transition-opacity hover:opacity-90"
+            style={{ backgroundColor: '#FF5E5B' }}
           >
             <span className="text-lg">🐾</span>
             Dog Treat Fund

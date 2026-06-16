@@ -59,6 +59,10 @@ function isPuzzleValid(
 
 export function generatePuzzle(sport: Sport, dateStr: string): Puzzle {
   if (sport === 'mixed') return generateMixedPuzzle(dateStr);
+  if (sport === 'challenge') {
+    const p = generateMixedPuzzle(dateStr);
+    return { ...p, sport: 'challenge' };
+  }
   const seed = hashString(`${sport}-${dateStr}`);
   const rng = mulberry32(seed);
 
@@ -141,6 +145,7 @@ export function createInitialGameState(puzzle: Puzzle): GameState {
     selectedCell: null,
     usedPlayerIds: [],
     status: 'playing',
+    score: 0,
   };
 }
 
@@ -160,5 +165,5 @@ export function getShareText(state: GameState): string {
   const filled = cells.flat().filter(c => c.isCorrect).length;
   const result = status === 'won' ? `${filled}/9 ` : `${filled}/9 `;
 
-  return `SportsDoku – ${sportName} – ${date}\n${grid}\n${result}cells correct\nsportsdoku.app`;
+  return `Spordoku – ${sportName} – ${date}\n${grid}\n${result}cells correct\nspordoku.app`;
 }

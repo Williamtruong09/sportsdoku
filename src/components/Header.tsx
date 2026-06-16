@@ -20,18 +20,17 @@ export function Header({ guessesRemaining, date, onHelp, onDonate }: Props) {
         </button>
         <button
           onClick={onDonate}
-          className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-gray-800 transition-colors text-base"
+          className="flex items-center gap-1 px-2 h-8 rounded-full hover:bg-gray-800 transition-colors text-sm font-semibold text-amber-400"
           aria-label="Support the developer"
-          title="Buy my dogs some treats 🐾"
         >
-          🐾
+          🐾 <span className="text-xs">Dog Treat Fund</span>
         </button>
       </div>
 
       <div className="text-center">
         <h1 className="text-xl font-black tracking-tight">
-          <span className="text-white">Sports</span>
-          <span className="text-orange-400">Doku</span>
+          <span className="text-white">Spor</span>
+          <span className="text-orange-400">doku</span>
         </h1>
         <p className="text-xs text-gray-500">{date}</p>
       </div>

@@ -35,6 +35,9 @@ export function GameOver({ state, onNewGame }: Props) {
           <p className="text-gray-400 mt-1">
             {filled}/9 cells correct · {sport.emoji} {sport.name}
           </p>
+          <p className="text-lg font-bold mt-2">
+            ⭐ {state.score} <span className="text-sm font-normal text-gray-500">pts</span>
+          </p>
         </div>
 
         {/* Answer key */}

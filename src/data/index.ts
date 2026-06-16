@@ -21,10 +21,11 @@ const criteriaMap: Record<Sport, Criterion[]> = {
   nhl: nhlCriteria,
   soccer: soccerCriteria,
   mixed: mixedCriteria,
+  challenge: mixedCriteria,
 };
 
 export function getPlayersForSport(sport: Sport): Player[] {
-  if (sport === 'mixed') return allPlayers;
+  if (sport === 'mixed' || sport === 'challenge') return allPlayers;
   return allPlayers.filter(p => p.sport === sport);
 }
 
