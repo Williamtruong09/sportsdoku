@@ -1415,7 +1415,7 @@ export const nflPlayers: Player[] = [
   { id: 'neville-hewitt', name: 'Neville Hewitt', sport: 'nfl', teams: ["Giants"], awards: [], country: 'USA', positions: ["LB"] },
   { id: 'nick-barnett', name: 'Nick Barnett', sport: 'nfl', teams: ["Redskins"], awards: [], country: 'USA', positions: ["LB"] },
   { id: 'nick-bolton', name: 'Nick Bolton', sport: 'nfl', teams: ["Chiefs"], awards: [], country: 'USA', positions: ["LB"] },
-  { id: 'nick-bosa', name: 'Nick Bosa', sport: 'nfl', teams: ["Seahawks"], awards: ["DPOY","Pro Bowl","All-Pro"], country: 'USA', positions: ["DE"] },
+  { id: 'nick-bosa', name: 'Nick Bosa', sport: 'nfl', teams: ["49ers"], awards: ["DPOY","Pro Bowl","All-Pro"], country: 'USA', positions: ["DE"] },
   { id: 'nick-chubb', name: 'Nick Chubb', sport: 'nfl', teams: ["Cardinals"], awards: [], country: 'USA', positions: ["RB"] },
   { id: 'nick-collins', name: 'Nick Collins', sport: 'nfl', teams: ["Packers"], awards: [], country: 'USA', positions: ["S"] },
   { id: 'nick-ferguson', name: 'Nick Ferguson', sport: 'nfl', teams: ["Cardinals"], awards: [], country: 'USA', positions: ["S"] },
