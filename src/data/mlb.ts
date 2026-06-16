@@ -1,44 +1,6 @@
-import type { Player, Criterion } from '../types';
+import type { Criterion } from '../types';
+export { mlbPlayers } from './generated/mlb';
 
-export const mlbPlayers: Player[] = [
-  { id: 'babe-ruth', name: 'Babe Ruth', sport: 'mlb', teams: ['Red Sox', 'Yankees', 'Braves'], awards: ['MVP', 'World Series', 'All-Star'], country: 'USA', positions: ['RF', 'P'] },
-  { id: 'derek-jeter', name: 'Derek Jeter', sport: 'mlb', teams: ['Yankees'], awards: ['World Series', 'All-Star', 'Gold Glove', 'Rookie of Year'], country: 'USA', positions: ['SS'] },
-  { id: 'willie-mays', name: 'Willie Mays', sport: 'mlb', teams: ['Giants', 'Mets'], awards: ['MVP', 'World Series', 'All-Star', 'Gold Glove'], country: 'USA', positions: ['CF'] },
-  { id: 'hank-aaron', name: 'Hank Aaron', sport: 'mlb', teams: ['Braves', 'Brewers'], awards: ['MVP', 'World Series', 'All-Star', 'Gold Glove'], country: 'USA', positions: ['RF'] },
-  { id: 'mike-trout', name: 'Mike Trout', sport: 'mlb', teams: ['Angels'], awards: ['MVP', 'Rookie of Year', 'All-Star', 'Gold Glove'], country: 'USA', positions: ['CF'] },
-  { id: 'albert-pujols', name: 'Albert Pujols', sport: 'mlb', teams: ['Cardinals', 'Angels', 'Dodgers'], awards: ['MVP', 'World Series', 'All-Star', 'Gold Glove', 'Rookie of Year'], country: 'Dominican Republic', positions: ['1B'] },
-  { id: 'roger-clemens', name: 'Roger Clemens', sport: 'mlb', teams: ['Red Sox', 'Blue Jays', 'Astros', 'Yankees'], awards: ['Cy Young', 'MVP', 'World Series', 'All-Star'], country: 'USA', positions: ['SP'] },
-  { id: 'randy-johnson', name: 'Randy Johnson', sport: 'mlb', teams: ['Expos', 'Mariners', 'Astros', 'Diamondbacks', 'Yankees', 'Giants'], awards: ['Cy Young', 'World Series MVP', 'All-Star'], country: 'USA', positions: ['SP'] },
-  { id: 'sandy-koufax', name: 'Sandy Koufax', sport: 'mlb', teams: ['Dodgers'], awards: ['Cy Young', 'World Series MVP', 'MVP', 'All-Star'], country: 'USA', positions: ['SP'] },
-  { id: 'cal-ripken-jr', name: 'Cal Ripken Jr.', sport: 'mlb', teams: ['Orioles'], awards: ['MVP', 'Rookie of Year', 'All-Star', 'Gold Glove'], country: 'USA', positions: ['SS', '3B'] },
-  { id: 'ken-griffey-jr', name: 'Ken Griffey Jr.', sport: 'mlb', teams: ['Mariners', 'Reds'], awards: ['MVP', 'Rookie of Year', 'All-Star', 'Gold Glove'], country: 'USA', positions: ['CF'] },
-  { id: 'ted-williams', name: 'Ted Williams', sport: 'mlb', teams: ['Red Sox'], awards: ['MVP', 'All-Star'], country: 'USA', positions: ['LF'] },
-  { id: 'stan-musial', name: 'Stan Musial', sport: 'mlb', teams: ['Cardinals'], awards: ['MVP', 'World Series', 'All-Star'], country: 'USA', positions: ['LF', '1B'] },
-  { id: 'clayton-kershaw', name: 'Clayton Kershaw', sport: 'mlb', teams: ['Dodgers'], awards: ['Cy Young', 'MVP', 'All-Star'], country: 'USA', positions: ['SP'] },
-  { id: 'shohei-ohtani', name: 'Shohei Ohtani', sport: 'mlb', teams: ['Angels', 'Dodgers'], awards: ['MVP', 'Rookie of Year', 'All-Star'], country: 'Japan', positions: ['SP', 'DH'] },
-  { id: 'bryce-harper', name: 'Bryce Harper', sport: 'mlb', teams: ['Nationals', 'Phillies'], awards: ['MVP', 'World Series', 'Rookie of Year', 'All-Star'], country: 'USA', positions: ['RF'] },
-  { id: 'pete-rose', name: 'Pete Rose', sport: 'mlb', teams: ['Reds', 'Phillies', 'Expos'], awards: ['MVP', 'World Series', 'Rookie of Year', 'All-Star'], country: 'USA', positions: ['LF', '1B', '2B', '3B'] },
-  { id: 'nolan-ryan', name: 'Nolan Ryan', sport: 'mlb', teams: ['Mets', 'Angels', 'Astros', 'Rangers'], awards: ['All-Star'], country: 'USA', positions: ['SP'] },
-  { id: 'cy-young', name: 'Cy Young', sport: 'mlb', teams: ['Cleveland Spiders', 'Cardinals', 'Red Sox', 'Indians', 'Braves'], awards: ['All-Star'], country: 'USA', positions: ['SP'] },
-  { id: 'mickey-mantle', name: 'Mickey Mantle', sport: 'mlb', teams: ['Yankees'], awards: ['MVP', 'World Series', 'World Series MVP', 'All-Star', 'Gold Glove'], country: 'USA', positions: ['CF'] },
-  { id: 'lou-gehrig', name: 'Lou Gehrig', sport: 'mlb', teams: ['Yankees'], awards: ['MVP', 'World Series', 'All-Star'], country: 'USA', positions: ['1B'] },
-  { id: 'jackie-robinson', name: 'Jackie Robinson', sport: 'mlb', teams: ['Dodgers'], awards: ['MVP', 'Rookie of Year', 'All-Star', 'World Series'], country: 'USA', positions: ['2B'] },
-  { id: 'roberto-clemente', name: 'Roberto Clemente', sport: 'mlb', teams: ['Pirates'], awards: ['MVP', 'World Series MVP', 'All-Star', 'Gold Glove'], country: 'Puerto Rico', positions: ['RF'] },
-  { id: 'ernie-banks', name: 'Ernie Banks', sport: 'mlb', teams: ['Cubs'], awards: ['MVP', 'All-Star', 'Gold Glove'], country: 'USA', positions: ['SS', '1B'] },
-  { id: 'reggie-jackson', name: 'Reggie Jackson', sport: 'mlb', teams: ['Athletics', 'Yankees', 'Angels', 'Orioles'], awards: ['World Series MVP', 'All-Star'], country: 'USA', positions: ['RF'] },
-  { id: 'manny-ramirez', name: 'Manny Ramirez', sport: 'mlb', teams: ['Indians', 'Red Sox', 'Dodgers'], awards: ['World Series MVP', 'All-Star'], country: 'Dominican Republic', positions: ['LF'] },
-  { id: 'david-ortiz', name: 'David Ortiz', sport: 'mlb', teams: ['Twins', 'Red Sox'], awards: ['World Series MVP', 'World Series', 'All-Star'], country: 'Dominican Republic', positions: ['DH'] },
-  { id: 'mariano-rivera', name: 'Mariano Rivera', sport: 'mlb', teams: ['Yankees'], awards: ['World Series MVP', 'World Series', 'All-Star', 'Rookie of Year'], country: 'Panama', positions: ['RP'] },
-  { id: 'greg-maddux', name: 'Greg Maddux', sport: 'mlb', teams: ['Cubs', 'Braves', 'Padres', 'Dodgers'], awards: ['Cy Young', 'World Series', 'All-Star', 'Gold Glove'], country: 'USA', positions: ['SP'] },
-  { id: 'pedro-martinez', name: 'Pedro Martinez', sport: 'mlb', teams: ['Dodgers', 'Expos', 'Red Sox', 'Mets', 'Phillies'], awards: ['Cy Young', 'World Series', 'All-Star'], country: 'Dominican Republic', positions: ['SP'] },
-  { id: 'ichiro-suzuki', name: 'Ichiro Suzuki', sport: 'mlb', teams: ['Mariners', 'Yankees', 'Marlins'], awards: ['MVP', 'Rookie of Year', 'All-Star', 'Gold Glove'], country: 'Japan', positions: ['RF'] },
-  { id: 'barry-bonds', name: 'Barry Bonds', sport: 'mlb', teams: ['Pirates', 'Giants'], awards: ['MVP', 'All-Star', 'Gold Glove', 'Rookie of Year'], country: 'USA', positions: ['LF'] },
-  { id: 'frank-thomas', name: 'Frank Thomas', sport: 'mlb', teams: ['White Sox', 'Athletics', 'Blue Jays'], awards: ['MVP', 'All-Star'], country: 'USA', positions: ['1B', 'DH'] },
-  { id: 'mike-schmidt', name: 'Mike Schmidt', sport: 'mlb', teams: ['Phillies'], awards: ['MVP', 'World Series MVP', 'World Series', 'All-Star', 'Gold Glove'], country: 'USA', positions: ['3B'] },
-  { id: 'jose-altuve', name: 'Jose Altuve', sport: 'mlb', teams: ['Astros'], awards: ['MVP', 'World Series', 'All-Star', 'Gold Glove'], country: 'Venezuela', positions: ['2B'] },
-  { id: 'ronald-acuna-jr', name: 'Ronald Acuña Jr.', sport: 'mlb', teams: ['Braves'], awards: ['MVP', 'Rookie of Year', 'All-Star', 'World Series'], country: 'Venezuela', positions: ['RF'] },
-  { id: 'juan-soto', name: 'Juan Soto', sport: 'mlb', teams: ['Nationals', 'Padres', 'Yankees', 'Mets'], awards: ['World Series', 'All-Star'], country: 'Dominican Republic', positions: ['LF', 'RF'] },
-];
 
 export const mlbCriteria: Criterion[] = [
   // Teams

@@ -1,47 +1,6 @@
-import type { Player, Criterion } from '../types';
+import type { Criterion } from '../types';
+export { nflPlayers } from './generated/nfl';
 
-export const nflPlayers: Player[] = [
-  { id: 'tom-brady', name: 'Tom Brady', sport: 'nfl', teams: ['Patriots', 'Buccaneers'], awards: ['Super Bowl MVP', 'MVP', 'All-Pro', 'Pro Bowl'], country: 'USA', positions: ['QB'] },
-  { id: 'patrick-mahomes', name: 'Patrick Mahomes', sport: 'nfl', teams: ['Chiefs'], awards: ['Super Bowl MVP', 'MVP', 'All-Pro', 'Pro Bowl'], country: 'USA', positions: ['QB'] },
-  { id: 'peyton-manning', name: 'Peyton Manning', sport: 'nfl', teams: ['Colts', 'Broncos'], awards: ['Super Bowl MVP', 'MVP', 'All-Pro', 'Pro Bowl'], country: 'USA', positions: ['QB'] },
-  { id: 'joe-montana', name: 'Joe Montana', sport: 'nfl', teams: ['49ers', 'Chiefs'], awards: ['Super Bowl MVP', 'MVP', 'All-Pro', 'Pro Bowl'], country: 'USA', positions: ['QB'] },
-  { id: 'jerry-rice', name: 'Jerry Rice', sport: 'nfl', teams: ['49ers', 'Raiders', 'Seahawks'], awards: ['Super Bowl MVP', 'All-Pro', 'Pro Bowl'], country: 'USA', positions: ['WR'] },
-  { id: 'lawrence-taylor', name: 'Lawrence Taylor', sport: 'nfl', teams: ['Giants'], awards: ['MVP', 'DPOY', 'All-Pro', 'Pro Bowl'], country: 'USA', positions: ['LB'] },
-  { id: 'aaron-rodgers', name: 'Aaron Rodgers', sport: 'nfl', teams: ['Packers', 'Jets'], awards: ['Super Bowl MVP', 'MVP', 'All-Pro', 'Pro Bowl'], country: 'USA', positions: ['QB'] },
-  { id: 'emmitt-smith', name: 'Emmitt Smith', sport: 'nfl', teams: ['Cowboys', 'Cardinals'], awards: ['Super Bowl MVP', 'All-Pro', 'Pro Bowl'], country: 'USA', positions: ['RB'] },
-  { id: 'barry-sanders', name: 'Barry Sanders', sport: 'nfl', teams: ['Lions'], awards: ['MVP', 'Offensive ROY', 'All-Pro', 'Pro Bowl'], country: 'USA', positions: ['RB'] },
-  { id: 'walter-payton', name: 'Walter Payton', sport: 'nfl', teams: ['Bears'], awards: ['MVP', 'All-Pro', 'Pro Bowl'], country: 'USA', positions: ['RB'] },
-  { id: 'deion-sanders', name: 'Deion Sanders', sport: 'nfl', teams: ['Falcons', '49ers', 'Cowboys', 'Redskins', 'Ravens'], awards: ['DPOY', 'All-Pro', 'Pro Bowl'], country: 'USA', positions: ['CB'] },
-  { id: 'brett-favre', name: 'Brett Favre', sport: 'nfl', teams: ['Packers', 'Jets', 'Vikings', 'Falcons'], awards: ['Super Bowl MVP', 'MVP', 'All-Pro', 'Pro Bowl'], country: 'USA', positions: ['QB'] },
-  { id: 'john-elway', name: 'John Elway', sport: 'nfl', teams: ['Broncos'], awards: ['Super Bowl MVP', 'MVP', 'All-Pro', 'Pro Bowl'], country: 'USA', positions: ['QB'] },
-  { id: 'dan-marino', name: 'Dan Marino', sport: 'nfl', teams: ['Dolphins'], awards: ['MVP', 'All-Pro', 'Pro Bowl'], country: 'USA', positions: ['QB'] },
-  { id: 'randy-moss', name: 'Randy Moss', sport: 'nfl', teams: ['Vikings', 'Raiders', 'Patriots', 'Titans', '49ers'], awards: ['Offensive ROY', 'All-Pro', 'Pro Bowl'], country: 'USA', positions: ['WR'] },
-  { id: 'jim-brown', name: 'Jim Brown', sport: 'nfl', teams: ['Browns'], awards: ['MVP', 'Offensive ROY', 'All-Pro', 'Pro Bowl'], country: 'USA', positions: ['RB'] },
-  { id: 'joe-namath', name: 'Joe Namath', sport: 'nfl', teams: ['Jets', 'Rams'], awards: ['Super Bowl MVP', 'MVP', 'Pro Bowl'], country: 'USA', positions: ['QB'] },
-  { id: 'reggie-white', name: 'Reggie White', sport: 'nfl', teams: ['Eagles', 'Packers', 'Panthers'], awards: ['DPOY', 'All-Pro', 'Pro Bowl'], country: 'USA', positions: ['DE'] },
-  { id: 'dick-butkus', name: 'Dick Butkus', sport: 'nfl', teams: ['Bears'], awards: ['DPOY', 'All-Pro', 'Pro Bowl'], country: 'USA', positions: ['LB'] },
-  { id: 'ray-lewis', name: 'Ray Lewis', sport: 'nfl', teams: ['Ravens'], awards: ['Super Bowl MVP', 'DPOY', 'All-Pro', 'Pro Bowl'], country: 'USA', positions: ['LB'] },
-  { id: 'lamar-jackson', name: 'Lamar Jackson', sport: 'nfl', teams: ['Ravens'], awards: ['MVP', 'Offensive ROY', 'All-Pro', 'Pro Bowl'], country: 'USA', positions: ['QB'] },
-  { id: 'josh-allen', name: 'Josh Allen', sport: 'nfl', teams: ['Bills'], awards: ['MVP', 'All-Pro', 'Pro Bowl'], country: 'USA', positions: ['QB'] },
-  { id: 'justin-jefferson', name: 'Justin Jefferson', sport: 'nfl', teams: ['Vikings'], awards: ['Offensive ROY', 'All-Pro', 'Pro Bowl'], country: 'USA', positions: ['WR'] },
-  { id: 'travis-kelce', name: 'Travis Kelce', sport: 'nfl', teams: ['Chiefs'], awards: ['All-Pro', 'Pro Bowl'], country: 'USA', positions: ['TE'] },
-  { id: 'rob-gronkowski', name: 'Rob Gronkowski', sport: 'nfl', teams: ['Patriots', 'Buccaneers'], awards: ['All-Pro', 'Pro Bowl'], country: 'USA', positions: ['TE'] },
-  { id: 'bo-jackson', name: 'Bo Jackson', sport: 'nfl', teams: ['Raiders', 'Seahawks'], awards: ['Pro Bowl'], country: 'USA', positions: ['RB'] },
-  { id: 'steve-young', name: 'Steve Young', sport: 'nfl', teams: ['49ers', 'Buccaneers'], awards: ['Super Bowl MVP', 'MVP', 'All-Pro', 'Pro Bowl'], country: 'USA', positions: ['QB'] },
-  { id: 'troy-aikman', name: 'Troy Aikman', sport: 'nfl', teams: ['Cowboys'], awards: ['Super Bowl MVP', 'All-Pro', 'Pro Bowl'], country: 'USA', positions: ['QB'] },
-  { id: 'drew-brees', name: 'Drew Brees', sport: 'nfl', teams: ['Chargers', 'Saints'], awards: ['Super Bowl MVP', 'All-Pro', 'Pro Bowl'], country: 'USA', positions: ['QB'] },
-  { id: 'eli-manning', name: 'Eli Manning', sport: 'nfl', teams: ['Giants'], awards: ['Super Bowl MVP', 'Pro Bowl'], country: 'USA', positions: ['QB'] },
-  { id: 'ben-roethlisberger', name: 'Ben Roethlisberger', sport: 'nfl', teams: ['Steelers'], awards: ['Super Bowl MVP', 'Pro Bowl'], country: 'USA', positions: ['QB'] },
-  { id: 'bruce-smith', name: 'Bruce Smith', sport: 'nfl', teams: ['Bills', 'Redskins'], awards: ['DPOY', 'All-Pro', 'Pro Bowl'], country: 'USA', positions: ['DE'] },
-  { id: 'jj-watt', name: 'J.J. Watt', sport: 'nfl', teams: ['Texans', 'Cardinals'], awards: ['DPOY', 'All-Pro', 'Pro Bowl'], country: 'USA', positions: ['DE'] },
-  { id: 'myles-garrett', name: 'Myles Garrett', sport: 'nfl', teams: ['Browns'], awards: ['DPOY', 'All-Pro', 'Pro Bowl'], country: 'USA', positions: ['DE'] },
-  { id: 'tyreek-hill', name: 'Tyreek Hill', sport: 'nfl', teams: ['Chiefs', 'Dolphins'], awards: ['All-Pro', 'Pro Bowl'], country: 'USA', positions: ['WR'] },
-  { id: 'davante-adams', name: 'Davante Adams', sport: 'nfl', teams: ['Packers', 'Raiders'], awards: ['All-Pro', 'Pro Bowl'], country: 'USA', positions: ['WR'] },
-  { id: 'terrell-owens', name: 'Terrell Owens', sport: 'nfl', teams: ['49ers', 'Eagles', 'Cowboys', 'Bills', 'Bengals'], awards: ['All-Pro', 'Pro Bowl'], country: 'USA', positions: ['WR'] },
-  { id: 'marshawn-lynch', name: 'Marshawn Lynch', sport: 'nfl', teams: ['Bills', 'Seahawks', 'Raiders'], awards: ['All-Pro', 'Pro Bowl'], country: 'USA', positions: ['RB'] },
-  { id: 'frank-gore', name: 'Frank Gore', sport: 'nfl', teams: ['49ers', 'Colts', 'Dolphins', 'Bills', 'Jets'], awards: ['Pro Bowl'], country: 'USA', positions: ['RB'] },
-  { id: 'christian-mccaffrey', name: 'Christian McCaffrey', sport: 'nfl', teams: ['Panthers', '49ers'], awards: ['Offensive ROY', 'All-Pro', 'Pro Bowl'], country: 'USA', positions: ['RB'] },
-];
 
 export const nflCriteria: Criterion[] = [
   // Teams

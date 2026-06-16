@@ -1,37 +1,6 @@
-import type { Player, Criterion } from '../types';
+import type { Criterion } from '../types';
+export { nhlPlayers } from './generated/nhl';
 
-export const nhlPlayers: Player[] = [
-  { id: 'wayne-gretzky', name: 'Wayne Gretzky', sport: 'nhl', teams: ['Oilers', 'Kings', 'Blues', 'Rangers'], awards: ['Hart Trophy', 'Conn Smythe', 'Art Ross', 'Stanley Cup', 'Calder Trophy'], country: 'Canada', positions: ['C'] },
-  { id: 'mario-lemieux', name: 'Mario Lemieux', sport: 'nhl', teams: ['Penguins'], awards: ['Hart Trophy', 'Conn Smythe', 'Art Ross', 'Stanley Cup', 'Calder Trophy'], country: 'Canada', positions: ['C'] },
-  { id: 'bobby-orr', name: 'Bobby Orr', sport: 'nhl', teams: ['Bruins', 'Blackhawks'], awards: ['Hart Trophy', 'Conn Smythe', 'Norris Trophy', 'Stanley Cup', 'Calder Trophy'], country: 'Canada', positions: ['D'] },
-  { id: 'gordie-howe', name: 'Gordie Howe', sport: 'nhl', teams: ['Red Wings', 'Whalers'], awards: ['Hart Trophy', 'Art Ross', 'Stanley Cup', 'Calder Trophy'], country: 'Canada', positions: ['RW'] },
-  { id: 'maurice-richard', name: 'Maurice Richard', sport: 'nhl', teams: ['Canadiens'], awards: ['Hart Trophy', 'Stanley Cup', 'Rocket Richard Trophy'], country: 'Canada', positions: ['RW'] },
-  { id: 'patrick-roy', name: 'Patrick Roy', sport: 'nhl', teams: ['Canadiens', 'Avalanche'], awards: ['Conn Smythe', 'Vezina Trophy', 'Stanley Cup', 'Calder Trophy'], country: 'Canada', positions: ['G'] },
-  { id: 'martin-brodeur', name: 'Martin Brodeur', sport: 'nhl', teams: ['Devils', 'Blues'], awards: ['Vezina Trophy', 'Stanley Cup', 'Calder Trophy'], country: 'Canada', positions: ['G'] },
-  { id: 'sidney-crosby', name: 'Sidney Crosby', sport: 'nhl', teams: ['Penguins'], awards: ['Hart Trophy', 'Conn Smythe', 'Art Ross', 'Stanley Cup', 'Calder Trophy'], country: 'Canada', positions: ['C'] },
-  { id: 'alex-ovechkin', name: 'Alex Ovechkin', sport: 'nhl', teams: ['Capitals'], awards: ['Hart Trophy', 'Conn Smythe', 'Rocket Richard Trophy', 'Stanley Cup', 'Calder Trophy'], country: 'Russia', positions: ['LW'] },
-  { id: 'connor-mcdavid', name: 'Connor McDavid', sport: 'nhl', teams: ['Oilers'], awards: ['Hart Trophy', 'Art Ross', 'Calder Trophy'], country: 'Canada', positions: ['C'] },
-  { id: 'nikita-kucherov', name: 'Nikita Kucherov', sport: 'nhl', teams: ['Lightning'], awards: ['Hart Trophy', 'Conn Smythe', 'Art Ross', 'Stanley Cup'], country: 'Russia', positions: ['RW'] },
-  { id: 'mark-messier', name: 'Mark Messier', sport: 'nhl', teams: ['Oilers', 'Rangers', 'Canucks'], awards: ['Hart Trophy', 'Conn Smythe', 'Stanley Cup'], country: 'Canada', positions: ['C', 'LW'] },
-  { id: 'steve-yzerman', name: 'Steve Yzerman', sport: 'nhl', teams: ['Red Wings'], awards: ['Conn Smythe', 'Stanley Cup'], country: 'Canada', positions: ['C'] },
-  { id: 'jaromir-jagr', name: 'Jaromir Jagr', sport: 'nhl', teams: ['Penguins', 'Capitals', 'Rangers', 'Flyers', 'Devils', 'Bruins', 'Devils'], awards: ['Art Ross', 'Stanley Cup'], country: 'Czech Republic', positions: ['RW'] },
-  { id: 'joe-sakic', name: 'Joe Sakic', sport: 'nhl', teams: ['Avalanche', 'Nordiques'], awards: ['Conn Smythe', 'Hart Trophy', 'Art Ross', 'Stanley Cup'], country: 'Canada', positions: ['C'] },
-  { id: 'brendan-shanahan', name: 'Brendan Shanahan', sport: 'nhl', teams: ['Devils', 'Blues', 'Whalers', 'Red Wings', 'Rangers'], awards: ['Stanley Cup'], country: 'Canada', positions: ['LW'] },
-  { id: 'dominik-hasek', name: 'Dominik Hasek', sport: 'nhl', teams: ['Blackhawks', 'Sabres', 'Red Wings', 'Senators'], awards: ['Hart Trophy', 'Vezina Trophy', 'Stanley Cup'], country: 'Czech Republic', positions: ['G'] },
-  { id: 'peter-forsberg', name: 'Peter Forsberg', sport: 'nhl', teams: ['Avalanche', 'Nordiques', 'Flyers', 'Predators'], awards: ['Hart Trophy', 'Art Ross', 'Conn Smythe', 'Stanley Cup', 'Calder Trophy'], country: 'Sweden', positions: ['C'] },
-  { id: 'nicklas-backstrom', name: 'Nicklas Backstrom', sport: 'nhl', teams: ['Capitals'], awards: ['Stanley Cup'], country: 'Sweden', positions: ['C'] },
-  { id: 'evgeni-malkin', name: 'Evgeni Malkin', sport: 'nhl', teams: ['Penguins'], awards: ['Hart Trophy', 'Conn Smythe', 'Art Ross', 'Stanley Cup', 'Calder Trophy'], country: 'Russia', positions: ['C'] },
-  { id: 'henrik-lundqvist', name: 'Henrik Lundqvist', sport: 'nhl', teams: ['Rangers', 'Capitals'], awards: ['Vezina Trophy'], country: 'Sweden', positions: ['G'] },
-  { id: 'marc-andre-fleury', name: 'Marc-André Fleury', sport: 'nhl', teams: ['Penguins', 'Golden Knights', 'Blackhawks', 'Wild'], awards: ['Stanley Cup', 'Vezina Trophy'], country: 'Canada', positions: ['G'] },
-  { id: 'john-tavares', name: 'John Tavares', sport: 'nhl', teams: ['Islanders', 'Maple Leafs'], awards: ['Calder Trophy'], country: 'Canada', positions: ['C'] },
-  { id: 'brad-marchand', name: 'Brad Marchand', sport: 'nhl', teams: ['Bruins'], awards: ['Stanley Cup'], country: 'Canada', positions: ['LW'] },
-  { id: 'nathan-mackinnon', name: 'Nathan MacKinnon', sport: 'nhl', teams: ['Avalanche'], awards: ['Hart Trophy', 'Art Ross', 'Conn Smythe', 'Stanley Cup', 'Calder Trophy'], country: 'Canada', positions: ['C'] },
-  { id: 'cale-makar', name: 'Cale Makar', sport: 'nhl', teams: ['Avalanche'], awards: ['Norris Trophy', 'Conn Smythe', 'Stanley Cup', 'Calder Trophy'], country: 'Canada', positions: ['D'] },
-  { id: 'auston-matthews', name: 'Auston Matthews', sport: 'nhl', teams: ['Maple Leafs'], awards: ['Rocket Richard Trophy', 'Calder Trophy'], country: 'USA', positions: ['C'] },
-  { id: 'leon-draisaitl', name: 'Leon Draisaitl', sport: 'nhl', teams: ['Oilers'], awards: ['Hart Trophy', 'Art Ross'], country: 'Germany', positions: ['C', 'LW'] },
-  { id: 'eric-lindros', name: 'Eric Lindros', sport: 'nhl', teams: ['Flyers', 'Rangers', 'Maple Leafs', 'Stars', 'Bruins'], awards: ['Hart Trophy'], country: 'Canada', positions: ['C'] },
-  { id: 'teemu-selanne', name: 'Teemu Selänne', sport: 'nhl', teams: ['Jets', 'Ducks', 'Sharks', 'Avalanche'], awards: ['Calder Trophy', 'Stanley Cup', 'Rocket Richard Trophy'], country: 'Finland', positions: ['RW'] },
-];
 
 export const nhlCriteria: Criterion[] = [
   // Teams

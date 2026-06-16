@@ -2,20 +2,31 @@ interface Props {
   guessesRemaining: number;
   date: string;
   onHelp: () => void;
+  onDonate: () => void;
 }
 
-export function Header({ guessesRemaining, date, onHelp }: Props) {
+export function Header({ guessesRemaining, date, onHelp, onDonate }: Props) {
   const hearts = Array.from({ length: 9 }, (_, i) => i < guessesRemaining);
 
   return (
     <header className="flex items-center justify-between px-4 py-3 border-b border-gray-800">
-      <button
-        onClick={onHelp}
-        className="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-800 transition-colors text-sm font-bold"
-        aria-label="Help"
-      >
-        ?
-      </button>
+      <div className="flex gap-1">
+        <button
+          onClick={onHelp}
+          className="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-800 transition-colors text-sm font-bold"
+          aria-label="Help"
+        >
+          ?
+        </button>
+        <button
+          onClick={onDonate}
+          className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-gray-800 transition-colors text-base"
+          aria-label="Support the developer"
+          title="Buy my dogs some treats 🐾"
+        >
+          🐾
+        </button>
+      </div>
 
       <div className="text-center">
         <h1 className="text-xl font-black tracking-tight">

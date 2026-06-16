@@ -8,6 +8,7 @@ import { SportSelector } from './components/SportSelector';
 import { Grid } from './components/Grid';
 import { PlayerSearch } from './components/PlayerSearch';
 import { GameOver } from './components/GameOver';
+import { DonatePage } from './components/DonatePage';
 
 const STORAGE_KEY = 'sportsdoku-state-v1';
 
@@ -45,6 +46,7 @@ export default function App() {
   const [sport, setSport] = useState<Sport>(INITIAL_SPORT);
   const [gameState, setGameState] = useState<GameState>(() => buildInitialState(INITIAL_SPORT));
   const [showHelp, setShowHelp] = useState(false);
+  const [showDonate, setShowDonate] = useState(false);
 
   function updateState(next: GameState) {
     saveState(next);
@@ -128,6 +130,7 @@ export default function App() {
         guessesRemaining={gameState.guessesRemaining}
         date={gameState.puzzle.date}
         onHelp={() => setShowHelp(true)}
+        onDonate={() => setShowDonate(true)}
       />
 
       <main className="flex-1 flex flex-col items-center gap-4 py-4 px-2">
@@ -163,6 +166,9 @@ export default function App() {
       {status !== 'playing' && (
         <GameOver state={gameState} onNewGame={handleNewGame} />
       )}
+
+      {/* Donate modal */}
+      {showDonate && <DonatePage onClose={() => setShowDonate(false)} />}
 
       {/* Help modal */}
       {showHelp && (

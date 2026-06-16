@@ -1,43 +1,6 @@
-import type { Player, Criterion } from '../types';
+import type { Criterion } from '../types';
+export { soccerPlayers } from './generated/soccer';
 
-export const soccerPlayers: Player[] = [
-  { id: 'lionel-messi', name: 'Lionel Messi', sport: 'soccer', teams: ['Barcelona', 'PSG', 'Inter Miami'], awards: ['Ballon d\'Or', 'World Cup', 'Champions League', 'La Liga', 'Copa America'], country: 'Argentina', positions: ['Forward'] },
-  { id: 'cristiano-ronaldo', name: 'Cristiano Ronaldo', sport: 'soccer', teams: ['Sporting CP', 'Manchester United', 'Real Madrid', 'Juventus', 'Al Nassr'], awards: ['Ballon d\'Or', 'Champions League', 'Premier League', 'La Liga', 'Serie A', 'Euro'], country: 'Portugal', positions: ['Forward'] },
-  { id: 'pele', name: 'Pelé', sport: 'soccer', teams: ['Santos', 'Cosmos'], awards: ['World Cup', 'Copa Libertadores'], country: 'Brazil', positions: ['Forward'] },
-  { id: 'diego-maradona', name: 'Diego Maradona', sport: 'soccer', teams: ['Barcelona', 'Napoli', 'Boca Juniors'], awards: ['Ballon d\'Or', 'World Cup', 'Serie A'], country: 'Argentina', positions: ['Forward', 'Midfielder'] },
-  { id: 'zinedine-zidane', name: 'Zinedine Zidane', sport: 'soccer', teams: ['Juventus', 'Real Madrid'], awards: ['Ballon d\'Or', 'Champions League', 'World Cup', 'La Liga', 'Serie A', 'Euro'], country: 'France', positions: ['Midfielder'] },
-  { id: 'ronaldo-nazario', name: 'Ronaldo Nazário', sport: 'soccer', teams: ['Barcelona', 'Inter Milan', 'Real Madrid', 'Milan'], awards: ['Ballon d\'Or', 'World Cup', 'La Liga', 'Champions League'], country: 'Brazil', positions: ['Forward'] },
-  { id: 'thierry-henry', name: 'Thierry Henry', sport: 'soccer', teams: ['Monaco', 'Juventus', 'Arsenal', 'Barcelona', 'Red Bulls'], awards: ['Premier League', 'Champions League', 'World Cup', 'La Liga', 'Euro'], country: 'France', positions: ['Forward'] },
-  { id: 'ronaldinho', name: 'Ronaldinho', sport: 'soccer', teams: ['PSG', 'Barcelona', 'Milan', 'Atletico Mineiro'], awards: ['Ballon d\'Or', 'Champions League', 'World Cup', 'La Liga'], country: 'Brazil', positions: ['Forward', 'Midfielder'] },
-  { id: 'andres-iniesta', name: 'Andrés Iniesta', sport: 'soccer', teams: ['Barcelona', 'Vissel Kobe'], awards: ['Champions League', 'La Liga', 'World Cup', 'Euro'], country: 'Spain', positions: ['Midfielder'] },
-  { id: 'xavi-hernandez', name: 'Xavi Hernández', sport: 'soccer', teams: ['Barcelona', 'Al Sadd'], awards: ['Champions League', 'La Liga', 'World Cup', 'Euro'], country: 'Spain', positions: ['Midfielder'] },
-  { id: 'neymar', name: 'Neymar Jr.', sport: 'soccer', teams: ['Santos', 'Barcelona', 'PSG', 'Al Hilal'], awards: ['Champions League', 'La Liga', 'Copa America', 'Copa Libertadores'], country: 'Brazil', positions: ['Forward'] },
-  { id: 'kylian-mbappe', name: 'Kylian Mbappé', sport: 'soccer', teams: ['Monaco', 'PSG', 'Real Madrid'], awards: ['World Cup', 'Champions League', 'Ligue 1', 'La Liga'], country: 'France', positions: ['Forward'] },
-  { id: 'erling-haaland', name: 'Erling Haaland', sport: 'soccer', teams: ['Molde', 'RB Salzburg', 'Borussia Dortmund', 'Manchester City'], awards: ['Champions League', 'Premier League', 'Bundesliga'], country: 'Norway', positions: ['Forward'] },
-  { id: 'robert-lewandowski', name: 'Robert Lewandowski', sport: 'soccer', teams: ['Lech Poznan', 'Borussia Dortmund', 'Bayern Munich', 'Barcelona'], awards: ['Bundesliga', 'Champions League', 'La Liga'], country: 'Poland', positions: ['Forward'] },
-  { id: 'luka-modric', name: 'Luka Modrić', sport: 'soccer', teams: ['Dinamo Zagreb', 'Tottenham', 'Real Madrid'], awards: ['Ballon d\'Or', 'Champions League', 'La Liga', 'Euro'], country: 'Croatia', positions: ['Midfielder'] },
-  { id: 'manuel-neuer', name: 'Manuel Neuer', sport: 'soccer', teams: ['Schalke', 'Bayern Munich'], awards: ['Champions League', 'Bundesliga', 'World Cup', 'Euro'], country: 'Germany', positions: ['Goalkeeper'] },
-  { id: 'virgil-van-dijk', name: 'Virgil van Dijk', sport: 'soccer', teams: ['Groningen', 'Celtic', 'Southampton', 'Liverpool'], awards: ['Champions League', 'Premier League'], country: 'Netherlands', positions: ['Defender'] },
-  { id: 'kevin-de-bruyne', name: 'Kevin De Bruyne', sport: 'soccer', teams: ['Genk', 'Chelsea', 'Werder Bremen', 'Wolfsburg', 'Manchester City'], awards: ['Premier League', 'Champions League'], country: 'Belgium', positions: ['Midfielder'] },
-  { id: 'karim-benzema', name: 'Karim Benzema', sport: 'soccer', teams: ['Lyon', 'Real Madrid', 'Al Ittihad'], awards: ['Ballon d\'Or', 'Champions League', 'La Liga'], country: 'France', positions: ['Forward'] },
-  { id: 'gareth-bale', name: 'Gareth Bale', sport: 'soccer', teams: ['Southampton', 'Tottenham', 'Real Madrid', 'Spurs', 'LAFC'], awards: ['Champions League', 'La Liga', 'Euro'], country: 'Wales', positions: ['Forward', 'Midfielder'] },
-  { id: 'paul-pogba', name: 'Paul Pogba', sport: 'soccer', teams: ['Manchester United', 'Juventus'], awards: ['World Cup', 'Serie A'], country: 'France', positions: ['Midfielder'] },
-  { id: 'zlatan-ibrahimovic', name: 'Zlatan Ibrahimović', sport: 'soccer', teams: ['Ajax', 'Juventus', 'Inter Milan', 'Barcelona', 'Milan', 'PSG', 'Manchester United', 'LA Galaxy'], awards: ['Serie A', 'La Liga', 'Ligue 1', 'Champions League'], country: 'Sweden', positions: ['Forward'] },
-  { id: 'frank-lampard', name: 'Frank Lampard', sport: 'soccer', teams: ['West Ham', 'Chelsea', 'Manchester City', 'NYCFC'], awards: ['Premier League', 'Champions League'], country: 'England', positions: ['Midfielder'] },
-  { id: 'steven-gerrard', name: 'Steven Gerrard', sport: 'soccer', teams: ['Liverpool', 'LA Galaxy'], awards: ['Champions League', 'Euro'], country: 'England', positions: ['Midfielder'] },
-  { id: 'wayne-rooney', name: 'Wayne Rooney', sport: 'soccer', teams: ['Everton', 'Manchester United', 'DC United', 'Derby County'], awards: ['Premier League', 'Champions League', 'Euro'], country: 'England', positions: ['Forward'] },
-  { id: 'david-beckham', name: 'David Beckham', sport: 'soccer', teams: ['Manchester United', 'Real Madrid', 'LA Galaxy', 'Milan', 'PSG'], awards: ['Premier League', 'Champions League', 'La Liga'], country: 'England', positions: ['Midfielder'] },
-  { id: 'roberto-carlos', name: 'Roberto Carlos', sport: 'soccer', teams: ['Corinthians', 'Inter Milan', 'Real Madrid', 'Besiktas', 'Anzhi'], awards: ['Champions League', 'La Liga', 'World Cup'], country: 'Brazil', positions: ['Defender'] },
-  { id: 'philipp-lahm', name: 'Philipp Lahm', sport: 'soccer', teams: ['Bayern Munich', 'Stuttgart'], awards: ['Champions League', 'Bundesliga', 'World Cup'], country: 'Germany', positions: ['Defender', 'Midfielder'] },
-  { id: 'gianluigi-buffon', name: 'Gianluigi Buffon', sport: 'soccer', teams: ['Parma', 'Juventus', 'PSG'], awards: ['Serie A', 'World Cup', 'Champions League'], country: 'Italy', positions: ['Goalkeeper'] },
-  { id: 'andrea-pirlo', name: 'Andrea Pirlo', sport: 'soccer', teams: ['Brescia', 'Inter Milan', 'Milan', 'Juventus', 'NYCFC'], awards: ['Champions League', 'Serie A', 'World Cup'], country: 'Italy', positions: ['Midfielder'] },
-  { id: 'seedorf', name: 'Clarence Seedorf', sport: 'soccer', teams: ['Ajax', 'Sampdoria', 'Real Madrid', 'Inter Milan', 'Milan'], awards: ['Champions League', 'La Liga', 'Serie A'], country: 'Netherlands', positions: ['Midfielder'] },
-  { id: 'ruud-van-nistelrooy', name: 'Ruud van Nistelrooy', sport: 'soccer', teams: ['Den Bosch', 'Heerenveen', 'PSV', 'Manchester United', 'Real Madrid', 'Hamburger SV', 'Malaga'], awards: ['Premier League', 'Champions League', 'La Liga'], country: 'Netherlands', positions: ['Forward'] },
-  { id: 'didier-drogba', name: 'Didier Drogba', sport: 'soccer', teams: ['Le Mans', 'Marseille', 'Chelsea', 'Galatasaray', 'Montreal', 'Phoenix', 'Guingamp'], awards: ['Premier League', 'Champions League'], country: 'Ivory Coast', positions: ['Forward'] },
-  { id: 'vinicius-jr', name: 'Vinícius Jr.', sport: 'soccer', teams: ['Flamengo', 'Real Madrid'], awards: ['Champions League', 'La Liga', 'Ballon d\'Or'], country: 'Brazil', positions: ['Forward'] },
-  { id: 'pedri', name: 'Pedri', sport: 'soccer', teams: ['Las Palmas', 'Barcelona'], awards: ['La Liga', 'Champions League', 'Euro'], country: 'Spain', positions: ['Midfielder'] },
-  { id: 'jude-bellingham', name: 'Jude Bellingham', sport: 'soccer', teams: ['Birmingham City', 'Borussia Dortmund', 'Real Madrid'], awards: ['Champions League', 'La Liga', 'Bundesliga'], country: 'England', positions: ['Midfielder'] },
-];
 
 export const soccerCriteria: Criterion[] = [
   // Teams

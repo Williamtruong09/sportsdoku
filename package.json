@@ -6,7 +6,13 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "fetch-players": "node scripts/fetch-players.mjs",
+    "fetch-players:mlb": "node scripts/fetch-players.mjs mlb",
+    "fetch-players:nhl": "node scripts/fetch-players.mjs nhl",
+    "fetch-players:nba": "node scripts/fetch-players.mjs nba",
+    "fetch-players:nfl": "node scripts/fetch-players.mjs nfl",
+    "fetch-players:soccer": "FOOTBALL_DATA_KEY=your_key node scripts/fetch-players.mjs soccer"
   },
   "dependencies": {
     "react": "^18.2.0",

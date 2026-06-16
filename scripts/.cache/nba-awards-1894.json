@@ -1,0 +1,1 @@
+{"resource":"playerawards","parameters":{"PlayerID":1894},"resultSets":[{"name":"PlayerAwards","headers":["PERSON_ID","FIRST_NAME","LAST_NAME","TEAM","DESCRIPTION","ALL_NBA_TEAM_NUMBER","SEASON","MONTH","WEEK","CONFERENCE","TYPE","SUBTYPE1","SUBTYPE2","SUBTYPE3"],"rowSet":[]}]}
