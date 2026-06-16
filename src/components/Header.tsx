@@ -13,13 +13,6 @@ export function Header({ guessesRemaining, date, onHelp, onDonate, lastGuessWasW
     <header className="relative flex items-center justify-between px-4 py-3 border-b border-gray-800">
       <div className="flex gap-1 z-10">
         <button
-          onClick={onHelp}
-          className="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-800 transition-colors text-sm font-bold"
-          aria-label="Help"
-        >
-          ?
-        </button>
-        <button
           onClick={onDonate}
           className="flex items-center gap-1 px-2 h-8 rounded-full hover:bg-gray-800 transition-colors text-sm font-semibold text-amber-400"
           aria-label="Support the developer"
@@ -36,15 +29,24 @@ export function Header({ guessesRemaining, date, onHelp, onDonate, lastGuessWasW
         <p className="text-xs text-gray-500">{date}</p>
       </div>
 
-      <div className="flex gap-1 z-10" title={`${guessesRemaining} of 3 lives remaining`}>
-        {hearts.map((alive, i) => (
-          <span
-            key={i}
-            className={`text-xl transition-all duration-300 ${alive ? 'opacity-100' : 'opacity-20 grayscale'} ${!alive && lastGuessWasWrong && i === guessesRemaining ? 'animate-heart-break' : ''}`}
-          >
-            ❤️
-          </span>
-        ))}
+      <div className="flex items-center gap-2 z-10">
+        <div className="flex gap-1" title={`${guessesRemaining} of 3 lives remaining`}>
+          {hearts.map((alive, i) => (
+            <span
+              key={i}
+              className={`text-xl transition-all duration-300 ${alive ? 'opacity-100' : 'opacity-20 grayscale'} ${!alive && lastGuessWasWrong && i === guessesRemaining ? 'animate-heart-break' : ''}`}
+            >
+              ❤️
+            </span>
+          ))}
+        </div>
+        <button
+          onClick={onHelp}
+          className="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-800 transition-colors text-sm font-bold"
+          aria-label="Help"
+        >
+          ?
+        </button>
       </div>
     </header>
   );
