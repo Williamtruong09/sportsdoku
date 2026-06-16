@@ -468,7 +468,7 @@ async function fetchNBA() {
   for (const season of seasons) {
     try {
       const d = await get(
-        `https://stats.nba.com/stats/leagueleaders?LeagueID=00&Season=${season}&SeasonType=Regular+Season&PerMode=Totals&StatCategory=PTS&Scope=S`,
+        `https://stats.nba.com/stats/leagueleaders?LeagueID=00&Season=${season}&SeasonType=Regular+Season&PerMode=PerGame&StatCategory=PTS&Scope=S`,
         `nba-leaders-${season}`,
         NBA_HEADERS,
       );

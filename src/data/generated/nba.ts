@@ -41,7 +41,7 @@ export const nbaPlayers: Player[] = [
   { id: 'cade-cunningham', name: 'Cade Cunningham', sport: 'nba', teams: ["Pistons"], awards: ["All-Star"], country: 'USA', positions: ["Guard"] },
   { id: 'calvin-natt', name: 'Calvin Natt', sport: 'nba', teams: ["Trail Blazers","Nuggets","Nets","Pacers"], awards: ["All-Star"], country: 'USA', positions: ["Forward"] },
   { id: 'carlos-boozer', name: 'Carlos Boozer', sport: 'nba', teams: ["Jazz","Cavaliers","Bulls","Lakers"], awards: ["All-Star"], country: 'USA', positions: ["Forward"] },
-  { id: 'carmelo-anthony', name: 'Carmelo Anthony', sport: 'nba', teams: ["Nuggets","Knicks","Thunder","Rockets","Trail Blazers","Lakers"], awards: ["All-Star"], country: 'USA', positions: ["Forward"] },
+  { id: 'carmelo-anthony', name: 'Carmelo Anthony', sport: 'nba', teams: ["Nuggets","Knicks","Thunder","Rockets","Trail Blazers","Lakers"], awards: ["All-Star","Scoring Title"], country: 'USA', positions: ["Forward"] },
   { id: 'cedric-ceballos', name: 'Cedric Ceballos', sport: 'nba', teams: ["Lakers","Suns","Mavericks","Pistons","Heat"], awards: ["All-Star"], country: 'USA', positions: ["Forward"] },
   { id: 'charles-barkley', name: 'Charles Barkley', sport: 'nba', teams: ["Suns","Rockets"], awards: ["All-Star","MVP"], country: 'USA', positions: ["Forward"] },
   { id: 'charles-smith', name: 'Charles Smith', sport: 'nba', teams: ["Clippers","Knicks","Spurs"], awards: [], country: 'USA', positions: ["Forward"] },
