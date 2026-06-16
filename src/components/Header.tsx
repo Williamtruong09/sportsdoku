@@ -10,8 +10,8 @@ export function Header({ guessesRemaining, date, onHelp, onDonate, lastGuessWasW
   const hearts = Array.from({ length: 3 }, (_, i) => i < guessesRemaining);
 
   return (
-    <header className="flex items-center justify-between px-4 py-3 border-b border-gray-800">
-      <div className="flex gap-1">
+    <header className="relative flex items-center justify-between px-4 py-3 border-b border-gray-800">
+      <div className="flex gap-1 z-10">
         <button
           onClick={onHelp}
           className="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-800 transition-colors text-sm font-bold"
@@ -28,7 +28,7 @@ export function Header({ guessesRemaining, date, onHelp, onDonate, lastGuessWasW
         </button>
       </div>
 
-      <div className="text-center">
+      <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
         <h1 className="text-xl font-black tracking-tight">
           <span className="text-white">Spor</span>
           <span className="text-orange-400">doku</span>
@@ -36,7 +36,7 @@ export function Header({ guessesRemaining, date, onHelp, onDonate, lastGuessWasW
         <p className="text-xs text-gray-500">{date}</p>
       </div>
 
-      <div className="flex gap-1" title={`${guessesRemaining} of 3 lives remaining`}>
+      <div className="flex gap-1 z-10" title={`${guessesRemaining} of 3 lives remaining`}>
         {hearts.map((alive, i) => (
           <span
             key={i}
