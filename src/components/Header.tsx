@@ -3,10 +3,11 @@ interface Props {
   date: string;
   onHelp: () => void;
   onDonate: () => void;
+  lastGuessWasWrong?: boolean;
 }
 
-export function Header({ guessesRemaining, date, onHelp, onDonate }: Props) {
-  const hearts = Array.from({ length: 9 }, (_, i) => i < guessesRemaining);
+export function Header({ guessesRemaining, date, onHelp, onDonate, lastGuessWasWrong }: Props) {
+  const hearts = Array.from({ length: 3 }, (_, i) => i < guessesRemaining);
 
   return (
     <header className="flex items-center justify-between px-4 py-3 border-b border-gray-800">
@@ -35,9 +36,12 @@ export function Header({ guessesRemaining, date, onHelp, onDonate }: Props) {
         <p className="text-xs text-gray-500">{date}</p>
       </div>
 
-      <div className="flex gap-0.5" title={`${guessesRemaining} guesses remaining`}>
+      <div className="flex gap-1" title={`${guessesRemaining} of 3 lives remaining`}>
         {hearts.map((alive, i) => (
-          <span key={i} className={`text-sm transition-all ${alive ? 'opacity-100' : 'opacity-20 grayscale'}`}>
+          <span
+            key={i}
+            className={`text-xl transition-all duration-300 ${alive ? 'opacity-100' : 'opacity-20 grayscale'} ${!alive && lastGuessWasWrong && i === guessesRemaining ? 'animate-heart-break' : ''}`}
+          >
             ❤️
           </span>
         ))}
