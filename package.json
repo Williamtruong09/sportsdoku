@@ -15,6 +15,7 @@
     "fetch-players:soccer": "FOOTBALL_DATA_KEY=your_key node scripts/fetch-players.mjs soccer"
   },
   "dependencies": {
+    "@vercel/analytics": "^2.0.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },
