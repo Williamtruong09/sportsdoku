@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import type { Sport, GameState, Player, Puzzle } from './types';
 import { SPORT_CONFIGS } from './types';
 import { playerSatisfiesCriterion, getValidPlayersForCell } from './data';
@@ -56,6 +56,8 @@ export default function App() {
   const [gameState, setGameState] = useState<GameState>(() => buildInitialState(INITIAL_SPORT));
   const [showHelp, setShowHelp] = useState(false);
   const [showDonate, setShowDonate] = useState(false);
+  const [lostAnimPlaying, setLostAnimPlaying] = useState(false);
+  const [lastGuessWasWrong, setLastGuessWasWrong] = useState(false);
 
   function updateState(next: GameState) {
     saveState(next);
@@ -100,7 +102,8 @@ export default function App() {
         })
       );
 
-      const newGuesses = gameState.guessesRemaining - 1;
+      // Only wrong guesses cost a life (correct guesses are free)
+      const newGuesses = isCorrect ? gameState.guessesRemaining : gameState.guessesRemaining - 1;
       const newUsed = isCorrect
         ? [...gameState.usedPlayerIds, player.id]
         : gameState.usedPlayerIds;
@@ -123,10 +126,20 @@ export default function App() {
         score: newScore,
       };
 
+      setLastGuessWasWrong(!isCorrect);
+      if (newStatus === 'lost') {
+        setLostAnimPlaying(true);
+      }
       updateState(next);
     },
     [gameState]
   );
+
+  useEffect(() => {
+    if (!lostAnimPlaying) return;
+    const timer = setTimeout(() => setLostAnimPlaying(false), 850);
+    return () => clearTimeout(timer);
+  }, [lostAnimPlaying]);
 
   function handleNewGame() {
     const date = getTodayString();
@@ -156,6 +169,7 @@ export default function App() {
         date={gameState.puzzle.date}
         onHelp={() => setShowHelp(true)}
         onDonate={() => setShowDonate(true)}
+        lastGuessWasWrong={lastGuessWasWrong}
       />
 
       <main className="flex-1 flex flex-col items-center gap-4 py-4 px-2">
@@ -184,8 +198,8 @@ export default function App() {
         </div>
 
         <p className="text-xs text-gray-600 text-center max-w-xs">
-          Click a cell, then guess a player who satisfies both the row and column criteria.
-          You have {gameState.guessesRemaining} guess{gameState.guessesRemaining !== 1 ? 'es' : ''} remaining.
+          Click a cell and guess a player matching both criteria.
+          Wrong guesses cost a life — you have <span className="text-gray-400 font-semibold">{gameState.guessesRemaining} ❤️</span> remaining.
           Each player can only be used once.
         </p>
       </main>
@@ -202,8 +216,13 @@ export default function App() {
         />
       )}
 
-      {/* Game over modal */}
-      {status !== 'playing' && (
+      {/* Loss flash overlay */}
+      {lostAnimPlaying && (
+        <div className="fixed inset-0 z-40 pointer-events-none animate-loss-flash" />
+      )}
+
+      {/* Game over modal — delayed until loss animation finishes */}
+      {status !== 'playing' && !lostAnimPlaying && (
         <GameOver state={gameState} onNewGame={handleNewGame} />
       )}
 
@@ -230,7 +249,7 @@ export default function App() {
               <li>Choose a sport from the tabs above the grid.</li>
               <li>The 3×3 grid has <strong>row</strong> and <strong>column</strong> criteria (teams, awards, countries, positions).</li>
               <li>Click any cell and type a player's name who satisfies <em>both</em> that row's and column's criteria.</li>
-              <li>You have <strong>9 total guesses</strong> — one per cell. Wrong guesses still cost a guess.</li>
+              <li>You have <strong>3 lives ❤️</strong> — only wrong guesses cost a life. Correct guesses are free!</li>
               <li>Each player can only be used <strong>once</strong> across all cells.</li>
               <li>Fill all 9 cells correctly to win!</li>
             </ol>

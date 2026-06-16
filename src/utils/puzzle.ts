@@ -148,7 +148,7 @@ export function createInitialGameState(puzzle: Puzzle): GameState {
   return {
     puzzle,
     cells,
-    guessesRemaining: 9,
+    guessesRemaining: 3,
     selectedCell: null,
     usedPlayerIds: [],
     status: 'playing',
