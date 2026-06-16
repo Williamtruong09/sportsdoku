@@ -5,24 +5,29 @@ import { mulberry32, hashString, shuffleArray } from './seededRandom';
 const MAX_ATTEMPTS = 200;
 const GRID_SIZE = 3;
 
-function generateMixedPuzzle(dateStr: string): Puzzle {
+export function puzzleCriteriaKey(puzzle: Puzzle): string {
+  return [...puzzle.rows, ...puzzle.cols].map(c => c.id).sort().join('|');
+}
+
+function generateMixedPuzzle(dateStr: string, excludeKey?: string): Puzzle {
   const seed = hashString(`mixed-${dateStr}`);
   const rng = mulberry32(seed);
 
   const allCriteria = getCriteriaForSport('mixed');
   const sportCriteria = allCriteria.filter(c => c.type === 'sport');
-  const countryCriteria = allCriteria.filter(c => c.type === 'country');
+  // non-sport pool: countries + cross-sport awards
+  const nonSportCriteria = allCriteria.filter(c => c.type !== 'sport');
 
   const players = getPlayersForSport('mixed');
 
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
     const shuffledSports = shuffleArray(sportCriteria, rng);
-    const shuffledCountries = shuffleArray(countryCriteria, rng);
+    const shuffledNonSport = shuffleArray(nonSportCriteria, rng);
 
-    // rows = 3 sport criteria, cols = 3 country criteria (or swap)
+    // rows = sports, cols = countries/awards (or swap)
     const useSwap = (rng() & 1) === 1;
-    const rows = (useSwap ? shuffledCountries : shuffledSports).slice(0, GRID_SIZE) as [Criterion, Criterion, Criterion];
-    const cols = (useSwap ? shuffledSports : shuffledCountries).slice(0, GRID_SIZE) as [Criterion, Criterion, Criterion];
+    const rows = (useSwap ? shuffledNonSport : shuffledSports).slice(0, GRID_SIZE) as [Criterion, Criterion, Criterion];
+    const cols = (useSwap ? shuffledSports : shuffledNonSport).slice(0, GRID_SIZE) as [Criterion, Criterion, Criterion];
 
     const valid = rows.every(row =>
       cols.every(col =>
@@ -30,12 +35,14 @@ function generateMixedPuzzle(dateStr: string): Puzzle {
       )
     );
 
-    if (valid) return { sport: 'mixed', date: dateStr, rows, cols };
+    if (!valid) continue;
+    if (excludeKey && puzzleCriteriaKey({ sport: 'mixed', date: dateStr, rows, cols }) === excludeKey) continue;
+    return { sport: 'mixed', date: dateStr, rows, cols };
   }
 
-  // Fallback: NBA/NFL/MLB × USA/Canada/France
+  // Fallback: first 3 sports × first 3 non-sport criteria
   const fallbackRows = sportCriteria.slice(0, 3) as [Criterion, Criterion, Criterion];
-  const fallbackCols = countryCriteria.slice(0, 3) as [Criterion, Criterion, Criterion];
+  const fallbackCols = nonSportCriteria.slice(0, 3) as [Criterion, Criterion, Criterion];
   return { sport: 'mixed', date: dateStr, rows: fallbackRows, cols: fallbackCols };
 }
 
@@ -57,10 +64,10 @@ function isPuzzleValid(
   return true;
 }
 
-export function generatePuzzle(sport: Sport, dateStr: string): Puzzle {
-  if (sport === 'mixed') return generateMixedPuzzle(dateStr);
+export function generatePuzzle(sport: Sport, dateStr: string, excludeKey?: string): Puzzle {
+  if (sport === 'mixed') return generateMixedPuzzle(dateStr, excludeKey);
   if (sport === 'challenge') {
-    const p = generateMixedPuzzle(dateStr);
+    const p = generateMixedPuzzle(dateStr, excludeKey);
     return { ...p, sport: 'challenge' };
   }
   const seed = hashString(`${sport}-${dateStr}`);

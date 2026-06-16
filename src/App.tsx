@@ -1,8 +1,8 @@
 import { useState, useCallback } from 'react';
-import type { Sport, GameState, Player } from './types';
+import type { Sport, GameState, Player, Puzzle } from './types';
 import { SPORT_CONFIGS } from './types';
 import { playerSatisfiesCriterion, getValidPlayersForCell } from './data';
-import { generatePuzzle, createInitialGameState, getTodayString } from './utils/puzzle';
+import { generatePuzzle, createInitialGameState, getTodayString, puzzleCriteriaKey } from './utils/puzzle';
 import { Header } from './components/Header';
 import { SportSelector } from './components/SportSelector';
 import { Grid } from './components/Grid';
@@ -136,7 +136,13 @@ export default function App() {
   }
 
   function handleShuffle() {
-    const puzzle = generatePuzzle('challenge', `challenge-${Date.now()}`);
+    const currentKey = puzzleCriteriaKey(gameState.puzzle);
+    let puzzle: Puzzle;
+    let counter = 0;
+    do {
+      puzzle = generatePuzzle('challenge', `challenge-${Date.now()}-${counter}`, currentKey);
+      counter++;
+    } while (puzzleCriteriaKey(puzzle) === currentKey && counter < 50);
     setGameState(createInitialGameState({ ...puzzle, date: getTodayString() }));
   }
 

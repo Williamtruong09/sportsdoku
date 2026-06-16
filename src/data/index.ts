@@ -41,8 +41,21 @@ export function playerSatisfiesCriterion(player: Player, criterion: Criterion): 
   switch (criterion.type) {
     case 'team':
       return player.teams.includes(criterion.value);
-    case 'award':
-      return player.awards.includes(criterion.value);
+    case 'award': {
+      const a = player.awards;
+      switch (criterion.value) {
+        case 'meta:mvp':
+          return a.includes('MVP') || a.includes('Hart Trophy');
+        case 'meta:roty':
+          return a.includes('Rookie of Year') || a.includes('Offensive ROY') || a.includes('Calder Trophy');
+        case 'meta:dpoy':
+          return a.includes('DPOY') || a.includes('Norris Trophy');
+        case 'meta:finals-mvp':
+          return a.includes('Finals MVP') || a.includes('Super Bowl MVP') || a.includes('Conn Smythe') || a.includes('World Series MVP');
+        default:
+          return a.includes(criterion.value);
+      }
+    }
     case 'country':
       return player.country === criterion.value;
     case 'position':

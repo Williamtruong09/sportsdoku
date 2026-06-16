@@ -20,4 +20,9 @@ export const mixedCriteria: Criterion[] = [
   { id: 'country-dominican', type: 'country', value: 'Dominican Republic', label: 'Dominican', emoji: '🇩🇴' },
   { id: 'country-japan', type: 'country', value: 'Japan', label: 'Japanese', emoji: '🇯🇵' },
   { id: 'country-england', type: 'country', value: 'England', label: 'English', emoji: '🏴󠁧󠁢󠁥󠁮󠁧󠁿' },
+  // Cross-sport award criteria — generator skips cells with 0 valid players automatically
+  { id: 'award-meta-mvp', type: 'award', value: 'meta:mvp', label: 'Won League MVP', emoji: '🏆' },
+  { id: 'award-meta-roty', type: 'award', value: 'meta:roty', label: 'Won Rookie of Year', emoji: '🌟' },
+  { id: 'award-meta-dpoy', type: 'award', value: 'meta:dpoy', label: 'Won Defensive Award', emoji: '🛡️' },
+  { id: 'award-meta-finals', type: 'award', value: 'meta:finals-mvp', label: 'Won Championship MVP', emoji: '🥇' },
 ];
