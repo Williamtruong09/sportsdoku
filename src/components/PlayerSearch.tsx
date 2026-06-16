@@ -35,6 +35,11 @@ export function PlayerSearch({
     setHighlighted(0);
   }, [query, sport, usedPlayerIds]);
 
+  function submitGuess(player: Player) {
+    onGuess(player);
+    setQuery('');
+  }
+
   function handleKey(e: React.KeyboardEvent) {
     if (e.key === 'ArrowDown') {
       e.preventDefault();
@@ -43,7 +48,7 @@ export function PlayerSearch({
       e.preventDefault();
       setHighlighted(h => Math.max(h - 1, 0));
     } else if (e.key === 'Enter') {
-      if (results[highlighted]) onGuess(results[highlighted]);
+      if (results[highlighted]) submitGuess(results[highlighted]);
     } else if (e.key === 'Escape') {
       onClose();
     }
@@ -134,7 +139,7 @@ export function PlayerSearch({
                     background: i === highlighted ? '#1f1f1f' : 'transparent',
                     color: i === highlighted ? '#fff' : '#9ca3af',
                   }}
-                  onClick={() => onGuess(player)}
+                  onClick={() => submitGuess(player)}
                   onMouseEnter={() => setHighlighted(i)}
                 >
                   {player.name}

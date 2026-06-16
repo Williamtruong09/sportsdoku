@@ -21,8 +21,8 @@ export function SportSelector({ selected, onChange }: Props) {
               onClick={() => onChange(id)}
               className={`sport-btn flex-1 flex flex-col items-center gap-0.5 ${isActive ? 'active' : 'inactive'}`}
             >
-              <span style={{ fontSize: 16 }}>{s.emoji}</span>
-              <span style={{ fontSize: 10 }}>{s.name.toUpperCase()}</span>
+              <span className="text-base sm:text-xl">{s.emoji}</span>
+              <span className="text-[9px] sm:text-[11px]">{s.name.toUpperCase()}</span>
             </button>
           );
         })}

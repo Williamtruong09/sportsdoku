@@ -26,7 +26,7 @@ export function Header({ guessesRemaining, date, onHelp, onDonate, lastGuessWasW
         <div className="absolute left-1/2 -translate-x-1/2 text-center">
           <div
             className="font-display font-black uppercase leading-none"
-            style={{ fontSize: '22px', letterSpacing: '0.15em' }}
+            style={{ fontSize: 'clamp(20px, 3vw, 32px)', letterSpacing: '0.15em' }}
           >
             <span className="text-white">SPOR</span>
             <span
@@ -36,7 +36,7 @@ export function Header({ guessesRemaining, date, onHelp, onDonate, lastGuessWasW
               DOKU
             </span>
           </div>
-          <div className="text-gray-600 text-[10px] uppercase tracking-widest mt-0.5">
+          <div className="text-gray-600 uppercase tracking-widest mt-0.5" style={{ fontSize: 'clamp(9px, 1vw, 11px)' }}>
             {date}
           </div>
         </div>

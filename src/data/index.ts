@@ -1,40 +1,68 @@
 import type { Player, Criterion, Sport } from '../types';
-import { nbaPlayers, nbaCriteria } from './nba';
-import { nflPlayers, nflCriteria } from './nfl';
-import { mlbPlayers, mlbCriteria } from './mlb';
-import { nhlPlayers, nhlCriteria } from './nhl';
-import { soccerPlayers, soccerCriteria } from './soccer';
+
+// Criteria — tiny, always needed immediately
+import { nbaCriteria } from './nba';
+import { nflCriteria } from './nfl';
+import { mlbCriteria } from './mlb';
+import { nhlCriteria } from './nhl';
+import { soccerCriteria } from './soccer';
 import { mixedCriteria } from './mixed';
 
-export const allPlayers: Player[] = [
-  ...nbaPlayers,
-  ...nflPlayers,
-  ...mlbPlayers,
-  ...nhlPlayers,
-  ...soccerPlayers,
-];
-
-const criteriaMap: Record<Sport, Criterion[]> = {
-  nba: nbaCriteria,
-  nfl: nflCriteria,
-  mlb: mlbCriteria,
-  nhl: nhlCriteria,
-  soccer: soccerCriteria,
-  mixed: mixedCriteria,
-  challenge: mixedCriteria,
+// All sport player data — lazy loaded on demand, split into separate chunks by Vite
+const lazyLoaders: Partial<Record<Sport, () => Promise<Player[]>>> = {
+  nba: () => import('./generated/nba').then(m => m.nbaPlayers),
+  nfl: () => import('./generated/nfl').then(m => m.nflPlayers),
+  mlb: () => import('./generated/mlb').then(m => m.mlbPlayers),
+  nhl: () => import('./generated/nhl').then(m => m.nhlPlayers),
+  soccer: () => import('./generated/soccer').then(m => m.soccerPlayers),
 };
 
+const playerCache = new Map<Sport, Player[]>();
+
+/** Load a sport's player data into the cache. No-op if already loaded. */
+export async function loadSport(sport: Sport): Promise<void> {
+  if (sport === 'mixed' || sport === 'challenge') {
+    await Promise.all(
+      (['nfl', 'mlb', 'nhl', 'soccer'] as Sport[]).map(s => loadSport(s))
+    );
+    return;
+  }
+  if (playerCache.has(sport) || !lazyLoaders[sport]) return;
+  const players = await lazyLoaders[sport]!();
+  playerCache.set(sport, players);
+}
+
+export function isSportLoaded(sport: Sport): boolean {
+  if (sport === 'mixed' || sport === 'challenge') {
+    return (['nfl', 'mlb', 'nhl', 'soccer'] as Sport[]).every(s => playerCache.has(s));
+  }
+  return playerCache.has(sport);
+}
+
 export function getPlayersForSport(sport: Sport): Player[] {
-  if (sport === 'mixed' || sport === 'challenge') return allPlayers;
-  return allPlayers.filter(p => p.sport === sport);
+  if (sport === 'mixed' || sport === 'challenge') {
+    const all: Player[] = [];
+    for (const players of playerCache.values()) all.push(...players);
+    return all;
+  }
+  return playerCache.get(sport) ?? [];
 }
 
 export function getCriteriaForSport(sport: Sport): Criterion[] {
-  return criteriaMap[sport];
+  const map: Record<Sport, Criterion[]> = {
+    nba: nbaCriteria, nfl: nflCriteria, mlb: mlbCriteria,
+    nhl: nhlCriteria, soccer: soccerCriteria,
+    mixed: mixedCriteria, challenge: mixedCriteria,
+  };
+  return map[sport];
 }
 
 export function getPlayerById(id: string): Player | undefined {
-  return allPlayers.find(p => p.id === id);
+  for (const players of playerCache.values()) {
+    const found = players.find(p => p.id === id);
+    if (found) return found;
+  }
+  return undefined;
 }
 
 export function playerSatisfiesCriterion(player: Player, criterion: Criterion): boolean {

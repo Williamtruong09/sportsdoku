@@ -1,7 +1,7 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import type { Sport, GameState, Player, Puzzle } from './types';
 import { SPORT_CONFIGS } from './types';
-import { playerSatisfiesCriterion, getValidPlayersForCell } from './data';
+import { playerSatisfiesCriterion, getValidPlayersForCell, loadSport, isSportLoaded } from './data';
 import { generatePuzzle, createInitialGameState, getTodayString, puzzleCriteriaKey } from './utils/puzzle';
 import { Header } from './components/Header';
 import { SportSelector } from './components/SportSelector';
@@ -25,86 +25,115 @@ const INITIAL_SPORT: Sport = 'nba';
 
 export default function App() {
   const [sport, setSport] = useState<Sport>(INITIAL_SPORT);
-  const [gameState, setGameState] = useState<GameState>(() => buildInitialState(INITIAL_SPORT));
+  const [gameState, setGameState] = useState<GameState | null>(null);
   const [showHelp, setShowHelp] = useState(false);
   const [showDonate, setShowDonate] = useState(false);
   const [lostAnimPlaying, setLostAnimPlaying] = useState(false);
   const [lastGuessWasWrong, setLastGuessWasWrong] = useState(false);
+  const [sportLoading, setSportLoading] = useState(true);
 
   function updateState(next: GameState) {
     setGameState(next);
   }
 
-  function handleSportChange(newSport: Sport) {
+  // Load NBA on mount, then preload all other sports in background
+  useEffect(() => {
+    loadSport(INITIAL_SPORT).then(() => {
+      setGameState(buildInitialState(INITIAL_SPORT));
+      setSportLoading(false);
+      (['nfl', 'mlb', 'nhl', 'soccer'] as Sport[]).forEach(s => loadSport(s));
+    });
+  }, []);
+
+  async function handleSportChange(newSport: Sport) {
     setSport(newSport);
+    if (!isSportLoaded(newSport)) {
+      setSportLoading(true);
+      await loadSport(newSport);
+      setSportLoading(false);
+    }
     setGameState(buildInitialState(newSport));
   }
 
   function handleCellClick(row: number, col: number) {
-    if (gameState.status !== 'playing') return;
+    if (!gameState || gameState.status !== 'playing') return;
     if (gameState.cells[row][col].isCorrect) return;
 
-    setGameState(prev => ({
-      ...prev,
-      selectedCell:
-        prev.selectedCell?.[0] === row && prev.selectedCell?.[1] === col
-          ? null
-          : [row, col],
-    }));
+    setGameState(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        selectedCell:
+          prev.selectedCell?.[0] === row && prev.selectedCell?.[1] === col
+            ? null
+            : [row, col],
+      };
+    });
   }
 
   const handleGuess = useCallback(
     (player: Player) => {
-      if (!gameState.selectedCell) return;
-      const [row, col] = gameState.selectedCell;
-      const rowCrit = gameState.puzzle.rows[row];
-      const colCrit = gameState.puzzle.cols[col];
+      setGameState(prev => {
+        if (!prev || !prev.selectedCell || prev.status !== 'playing') return prev;
+        const [row, col] = prev.selectedCell;
+        const rowCrit = prev.puzzle.rows[row];
+        const colCrit = prev.puzzle.cols[col];
 
-      const isCorrect =
-        playerSatisfiesCriterion(player, rowCrit) &&
-        playerSatisfiesCriterion(player, colCrit);
+        const isCorrect =
+          playerSatisfiesCriterion(player, rowCrit) &&
+          playerSatisfiesCriterion(player, colCrit);
 
-      const newCells = gameState.cells.map((r, ri) =>
-        r.map((c, ci) => {
-          if (ri === row && ci === col) {
-            return { playerId: player.id, playerName: player.name, isCorrect };
-          }
-          return c;
-        })
-      );
+        const newCells = prev.cells.map((r, ri) =>
+          r.map((c, ci) => {
+            if (ri === row && ci === col) {
+              return { playerId: player.id, playerName: player.name, isCorrect };
+            }
+            return c;
+          })
+        );
 
-      // Only wrong guesses cost a life (correct guesses are free)
-      const newGuesses = isCorrect ? gameState.guessesRemaining : gameState.guessesRemaining - 1;
-      const newUsed = isCorrect
-        ? [...gameState.usedPlayerIds, player.id]
-        : gameState.usedPlayerIds;
+        // Only wrong guesses cost a life (correct guesses are free)
+        const newGuesses = isCorrect
+          ? prev.guessesRemaining
+          : Math.max(0, prev.guessesRemaining - 1);
+        const newUsed = isCorrect
+          ? [...prev.usedPlayerIds, player.id]
+          : prev.usedPlayerIds;
 
-      const allCorrect = newCells.flat().every(c => c.isCorrect);
-      const newStatus =
-        allCorrect ? 'won' : newGuesses <= 0 ? 'lost' : 'playing';
+        const allCorrect = newCells.flat().every(c => c.isCorrect);
+        const newStatus =
+          allCorrect ? 'won' : newGuesses <= 0 ? 'lost' : 'playing';
 
-      const newScore = isCorrect
-        ? gameState.score + Math.max(10, Math.round(1000 / Math.max(1, getValidPlayersForCell(gameState.puzzle.sport, rowCrit, colCrit).length)))
-        : gameState.score;
+        const newScore = isCorrect
+          ? prev.score + Math.max(10, Math.round(1000 / Math.max(1, getValidPlayersForCell(prev.puzzle.sport, rowCrit, colCrit).length)))
+          : prev.score;
 
-      const next: GameState = {
-        ...gameState,
-        cells: newCells,
-        guessesRemaining: newGuesses,
-        usedPlayerIds: newUsed,
-        selectedCell: isCorrect ? null : gameState.selectedCell,
-        status: newStatus,
-        score: newScore,
-      };
-
-      setLastGuessWasWrong(!isCorrect);
-      if (newStatus === 'lost') {
-        setLostAnimPlaying(true);
-      }
-      updateState(next);
+        return {
+          ...prev,
+          cells: newCells,
+          guessesRemaining: newGuesses,
+          usedPlayerIds: newUsed,
+          selectedCell: null, // always close modal after a guess
+          status: newStatus,
+          score: newScore,
+        };
+      });
     },
-    [gameState]
+    []
   );
+
+  // Trigger loss animation when status flips to lost
+  useEffect(() => {
+    if (gameState?.status === 'lost') setLostAnimPlaying(true);
+  }, [gameState?.status]);
+
+  // Track whether lives just decreased (drives heart-break animation)
+  const prevLivesRef = useRef(3);
+  useEffect(() => {
+    const lives = gameState?.guessesRemaining ?? 3;
+    setLastGuessWasWrong(lives < prevLivesRef.current);
+    prevLivesRef.current = lives;
+  }, [gameState?.guessesRemaining]);
 
   useEffect(() => {
     if (!lostAnimPlaying) return;
@@ -120,6 +149,7 @@ export default function App() {
   }
 
   function handleShuffle() {
+    if (!gameState) return;
     const currentKey = puzzleCriteriaKey(gameState.puzzle);
     let puzzle: Puzzle;
     let counter = 0;
@@ -130,8 +160,24 @@ export default function App() {
     setGameState(createInitialGameState({ ...puzzle, date: getTodayString() }));
   }
 
-  const { selectedCell, puzzle, status } = gameState;
   const sportCfg = SPORT_CONFIGS[sport];
+
+  // Full-screen loading while initial sport data fetches
+  if (sportLoading || !gameState) {
+    return (
+      <div className="min-h-screen flex flex-col" style={{ background: '#000' }}>
+        <Header guessesRemaining={3} date={getTodayString()} onHelp={() => {}} onDonate={() => setShowDonate(true)} />
+        <SportSelector selected={sport} onChange={() => {}} />
+        <main className="flex-1 flex items-center justify-center">
+          <span className="font-pixel text-orange-400 text-xs animate-pulse">LOADING...</span>
+        </main>
+        {showDonate && <DonatePage onClose={() => setShowDonate(false)} />}
+        <Analytics />
+      </div>
+    );
+  }
+
+  const { selectedCell, puzzle, status } = gameState;
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: '#000' }}>
@@ -145,24 +191,24 @@ export default function App() {
 
       <SportSelector selected={sport} onChange={handleSportChange} />
 
-      <main className="flex-1 flex flex-col items-center gap-4 py-4 px-2">
-        <div className="w-full max-w-lg">
-          <div className="flex items-center justify-between px-2 mb-2">
+      <main className="flex-1 flex flex-col items-center gap-4 py-4 sm:py-6 lg:py-8 px-2">
+        <div className="w-full max-w-lg sm:max-w-xl lg:max-w-3xl">
+          <div className="flex items-center justify-between px-2 mb-2 sm:mb-3">
             <div
               className={`font-display font-bold uppercase tracking-widest ${sportCfg.textClass}`}
-              style={{ fontSize: 11 }}
+              style={{ fontSize: 'clamp(11px, 1.5vw, 14px)' }}
             >
               {sportCfg.emoji} {sportCfg.name} {sport === 'challenge' ? 'Challenge' : 'Daily'}
             </div>
             <div className="flex items-center gap-3">
-              <span className="font-pixel text-orange-400" style={{ fontSize: 8, textShadow: '0 0 8px #f97316' }}>
+              <span className="font-pixel text-orange-400" style={{ fontSize: 'clamp(8px, 1vw, 11px)', textShadow: '0 0 8px #f97316' }}>
                 {String(gameState.score).padStart(5, '0')}
               </span>
               {sport === 'challenge' && gameState.status === 'playing' && (
                 <button
                   onClick={handleShuffle}
                   className="font-display font-bold uppercase tracking-widest text-pink-400 hover:text-pink-300 transition-colors"
-                  style={{ fontSize: 11 }}
+                  style={{ fontSize: 'clamp(11px, 1.5vw, 14px)' }}
                 >
                   🎲 Shuffle
                 </button>
@@ -172,7 +218,7 @@ export default function App() {
           <Grid state={gameState} onCellClick={handleCellClick} />
         </div>
 
-        <p className="font-display uppercase tracking-wider text-center max-w-xs" style={{ fontSize: 10, color: '#374151' }}>
+        <p className="font-display uppercase tracking-wider text-center max-w-xs sm:max-w-sm" style={{ fontSize: 'clamp(9px, 1vw, 11px)', color: '#374151' }}>
           Wrong guesses cost a life · each player used once
         </p>
       </main>
@@ -185,7 +231,7 @@ export default function App() {
           colCriterion={puzzle.cols[selectedCell[1]]}
           usedPlayerIds={gameState.usedPlayerIds}
           onGuess={handleGuess}
-          onClose={() => setGameState(prev => ({ ...prev, selectedCell: null }))}
+          onClose={() => setGameState(prev => prev ? { ...prev, selectedCell: null } : prev)}
         />
       )}
 

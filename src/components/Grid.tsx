@@ -13,11 +13,8 @@ export function Grid({ state, onCellClick }: Props) {
   const sport = SPORT_CONFIGS[puzzle.sport];
 
   return (
-    <div className="w-full max-w-lg mx-auto px-2">
-      <div
-        className="grid"
-        style={{ gridTemplateColumns: '72px repeat(3, 1fr)', gap: 2 }}
-      >
+    <div className="w-full mx-auto px-2">
+      <div className="game-grid">
         {/* Top-left corner */}
         <div
           className="flex items-center justify-center"
@@ -28,9 +25,9 @@ export function Grid({ state, onCellClick }: Props) {
 
         {/* Column headers */}
         {puzzle.cols.map(col => (
-          <div key={col.id} className="header-cell" style={{ minHeight: 52 }}>
+          <div key={col.id} className="header-cell col-header">
             <div>
-              {col.emoji && <div style={{ fontSize: 13, marginBottom: 2 }}>{col.emoji}</div>}
+              {col.emoji && <div className="header-emoji">{col.emoji}</div>}
               <div>{col.label}</div>
             </div>
           </div>
@@ -39,9 +36,9 @@ export function Grid({ state, onCellClick }: Props) {
         {/* Rows */}
         {puzzle.rows.map((row, rowIdx) => (
           <div key={row.id} className="contents">
-            <div className="header-cell" style={{ minHeight: 80 }}>
+            <div className="header-cell row-header">
               <div>
-                {row.emoji && <div style={{ fontSize: 13, marginBottom: 2 }}>{row.emoji}</div>}
+                {row.emoji && <div className="header-emoji">{row.emoji}</div>}
                 <div>{row.label}</div>
               </div>
             </div>

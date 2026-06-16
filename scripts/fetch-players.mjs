@@ -141,7 +141,32 @@ async function fetchMLB() {
   console.log('\n=== MLB ===');
   const byId = new Map(); // mlbId → { name, awards, teams, positions, country }
 
-  // 1. Collect award winners
+  // 1. Discover ALL players via season-by-season rosters (one request per year)
+  console.log('  Discovering all MLB players from 31 seasons...');
+  for (let year = 1994; year <= 2024; year++) {
+    try {
+      const d = await get(
+        `${MLB_BASE}/sports/1/players?season=${year}&gameType=R`,
+        `mlb-season-players-${year}`,
+      );
+      for (const person of d.people ?? []) {
+        if (!person?.id) continue;
+        const key = String(person.id);
+        const teamName = MLB_TEAM_NAMES[person.currentTeam?.name];
+        const country = MLB_COUNTRIES[person.birthCountry] ?? person.birthCountry ?? 'USA';
+        const pos = person.primaryPosition?.abbreviation;
+        if (!byId.has(key)) {
+          byId.set(key, { name: person.fullName ?? '', awards: new Set(), teams: new Set(), positions: pos ? [pos] : [], country });
+        }
+        if (teamName) byId.get(key).teams.add(teamName);
+      }
+    } catch (e) {
+      console.warn(`  ⚠ MLB season ${year}: ${e.message}`);
+    }
+  }
+  console.log(`  Discovered ${byId.size} MLB players from season rosters`);
+
+  // 2. Add awards from award endpoints
   for (const [awardId, ourAward] of Object.entries(MLB_AWARD_IDS)) {
     try {
       const d = await get(
@@ -153,59 +178,33 @@ async function fetchMLB() {
         if (!p?.id) continue;
         const key = String(p.id);
         if (!byId.has(key)) {
-          byId.set(key, {
-            name: p.fullName ?? p.nameFirstLast ?? '',
-            awards: new Set(),
-            teams: new Set(),
-            positions: [],
-            country: 'USA',
-          });
+          byId.set(key, { name: p.fullName ?? p.nameFirstLast ?? '', awards: new Set(), teams: new Set(), positions: [], country: 'USA' });
         }
         byId.get(key).awards.add(ourAward);
       }
-      console.log(`  Award ${awardId}: ${(d.awards ?? []).length} recipients`);
     } catch (e) {
       console.warn(`  ⚠ MLB award ${awardId}: ${e.message}`);
     }
   }
 
-  // 2. Also pull World Series ring winners from championship history
-  // This covers players who have WS rings but no other award
-  try {
-    const d = await get(
-      `${MLB_BASE}/standings?leagueId=103,104&season=2024&standingsTypes=regularSeason&hydrate=team`,
-      'mlb-ws-history',
-    );
-    // WS winners aren't easily available in this endpoint — skip, rely on WS MVP to infer
-  } catch { /* skip */ }
-
-  console.log(`  Found ${byId.size} award-winning MLB players, enriching...`);
-
-  // 3. Enrich each player with bio info and career team history
-  const players = [];
-  let done = 0;
-  for (const [mlbId, p] of byId) {
-    done++;
-    if (done % 100 === 0) console.log(`  Progress: ${done}/${byId.size}`);
+  // 3. Targeted enrichment for players still missing team data (pre-1994 award winners etc.)
+  const needsEnrichment = [...byId.entries()].filter(([, p]) => p.teams.size === 0);
+  console.log(`  Enriching ${needsEnrichment.length} players missing team data...`);
+  let enrichDone = 0;
+  for (const [mlbId, p] of needsEnrichment) {
+    enrichDone++;
+    if (enrichDone % 50 === 0) console.log(`  Enrich: ${enrichDone}/${needsEnrichment.length}`);
     try {
-      // Fetch basic bio without stats hydration — stats(type=career) causes HTTP 500 for old players
-      const d = await get(
-        `${MLB_BASE}/people/${mlbId}?hydrate=currentTeam`,
-        `mlb-person-${mlbId}`,
-      );
+      const d = await get(`${MLB_BASE}/people/${mlbId}?hydrate=currentTeam`, `mlb-person-${mlbId}`);
       const person = d.people?.[0];
       if (!person) continue;
-
       p.country = MLB_COUNTRIES[person.birthCountry] ?? person.birthCountry ?? 'USA';
-      p.positions = [person.primaryPosition?.abbreviation].filter(Boolean);
+      if (!p.positions.length) p.positions = [person.primaryPosition?.abbreviation].filter(Boolean);
       p.name = person.fullName ?? p.name;
-
       if (person.currentTeam?.name) {
         const t = MLB_TEAM_NAMES[person.currentTeam.name];
         if (t) p.teams.add(t);
       }
-
-      // Fetch year-by-year team history from a separate, lighter endpoint
       try {
         const sd = await get(
           `${MLB_BASE}/people/${mlbId}/stats?stats=yearByYear&group=hitting,pitching&sportId=1`,
@@ -217,23 +216,25 @@ async function fetchMLB() {
             if (t) p.teams.add(t);
           }
         }
-      } catch { /* stats endpoint optional — bio data is enough */ }
-
-      if (!p.name) continue;
-      // Players with no recognized teams (very old, minor league, etc.) still included
-      // if they have awards — use their name as fallback team indicator
-      players.push({
-        id: slug(p.name),
-        name: p.name,
-        sport: 'mlb',
-        teams: [...p.teams],
-        awards: [...p.awards],
-        country: p.country,
-        positions: p.positions,
-      });
+      } catch { /* stats optional */ }
     } catch (e) {
       console.warn(`  ⚠ MLB person ${mlbId}: ${e.message}`);
     }
+  }
+
+  // 4. Build final player list
+  const players = [];
+  for (const [, p] of byId) {
+    if (!p.name) continue;
+    players.push({
+      id: slug(p.name),
+      name: p.name,
+      sport: 'mlb',
+      teams: [...p.teams],
+      awards: [...p.awards],
+      country: p.country,
+      positions: p.positions,
+    });
   }
 
   return players;
@@ -274,6 +275,16 @@ const NHL_COUNTRIES = {
   DNK: 'Denmark', NOR: 'Norway', AUT: 'Austria',
 };
 
+const NHL_ALL_TEAM_ABBREVS = [
+  // Current 32 franchises
+  'ANA', 'BOS', 'BUF', 'CAR', 'CBJ', 'CGY', 'CHI', 'COL', 'DAL', 'DET',
+  'EDM', 'FLA', 'LAK', 'MIN', 'MTL', 'NJD', 'NSH', 'NYI', 'NYR', 'OTT',
+  'PHI', 'PIT', 'SEA', 'SJS', 'STL', 'TBL', 'TOR', 'UTA', 'VAN', 'VGK',
+  'WPG', 'WSH',
+  // Historical franchises active since 1990
+  'ARI', 'PHX', 'ATL', 'HFD', 'QUE',
+];
+
 async function fetchNHL() {
   console.log('\n=== NHL ===');
   const byId = new Map();
@@ -283,6 +294,31 @@ async function fetchNHL() {
   for (let y = 1990; y <= 2024; y++) {
     seasons.push(`${y}${y + 1}`);
   }
+
+  // 0. Discover ALL NHL players via team rosters across every season
+  console.log(`  Discovering NHL players via team rosters (${NHL_ALL_TEAM_ABBREVS.length} teams × ${seasons.length} seasons)...`);
+  let rostersDone = 0;
+  for (const teamAbbr of NHL_ALL_TEAM_ABBREVS) {
+    for (const season of seasons) {
+      try {
+        const d = await get(
+          `${NHL_BASE}/roster/${teamAbbr}/${season}`,
+          `nhl-roster-${teamAbbr}-${season}`,
+        );
+        for (const group of [d.forwards, d.defensemen, d.goalies]) {
+          for (const player of group ?? []) {
+            if (!player.id) continue;
+            const pid = String(player.id);
+            if (!byId.has(pid)) {
+              byId.set(pid, { name: '', awards: new Set(), teams: new Set(), positions: [], country: 'Canada' });
+            }
+          }
+        }
+        rostersDone++;
+      } catch { /* invalid team/season combo — silently skip */ }
+    }
+  }
+  console.log(`  Roster discovery: ${rostersDone} valid team-seasons, ${byId.size} unique players found`);
 
   // 1. Skater scoring leaders (forwards + defensemen) — captures Art Ross/Hart/Norris candidates
   console.log(`  Fetching skater scoring leaders (${seasons.length} seasons)...`);
@@ -453,106 +489,61 @@ const NBA_TEAM_ABBREVS = {
 
 async function fetchNBA() {
   console.log('\n=== NBA ===');
-  const byId = new Map();
+  const byId = new Map(); // pid → { name, country, positions, teams: Set, awards: Set }
 
-  // Season format for stats.nba.com: "1979-80", "2023-24"
-  const seasons = [];
-  for (let y = 1979; y <= 2024; y++) {
-    seasons.push(`${y}-${String(y + 1).slice(-2)}`);
-  }
+  // Step 1: playerindex returns ALL historical players in one request — name, country, position, years active
+  console.log('  Fetching full player index...');
+  try {
+    const d = await get(
+      'https://stats.nba.com/stats/playerindex?Historical=1&LeagueID=00&Season=2024-25&SeasonType=Regular+Season&TeamID=0&College=&Country=&DraftPick=&DraftRound=&DraftYear=&Height=&Weight=',
+      'nba-playerindex-historical',
+      NBA_HEADERS,
+    );
+    const rs = d.resultSets?.[0] ?? d.resultSet;
+    if (rs) {
+      const h = rs.headers;
+      const pidIdx    = h.indexOf('PERSON_ID');
+      const firstIdx  = h.indexOf('PLAYER_FIRST_NAME');
+      const lastIdx   = h.indexOf('PLAYER_LAST_NAME');
+      const posIdx    = h.indexOf('POSITION');
+      const countryIdx = h.indexOf('COUNTRY');
+      const fromIdx   = h.indexOf('FROM_YEAR');
+      const toIdx     = h.indexOf('TO_YEAR');
 
-  // Fetch top 25 per season for multiple stat categories
-  // Rank 1 in PTS = Scoring Title; Rank 1 in AST = assists leader
-  const NBA_STAT_CATS = [
-    { cat: 'PTS', label: 'scoring' },
-    { cat: 'AST', label: 'assists' },
-    { cat: 'REB', label: 'rebounds' },
-  ];
-  for (const { cat, label } of NBA_STAT_CATS) {
-    console.log(`  Fetching ${label} leaders per season (${seasons.length} seasons)...`);
-    let nbaSeasons = 0;
-    for (const season of seasons) {
-      try {
-        const d = await get(
-          `https://stats.nba.com/stats/leagueleaders?LeagueID=00&Season=${season}&SeasonType=Regular+Season&PerMode=PerGame&StatCategory=${cat}&Scope=S`,
-          `nba-leaders-${cat}-${season}`,
-          NBA_HEADERS,
-        );
-        const rs = d.resultSet ?? d.resultSets?.[0];
-        if (!rs) continue;
-        const h = rs.headers;
-        const pidIdx = h.indexOf('PLAYER_ID');
-        const nameIdx = h.indexOf('PLAYER');
-        const teamIdx = h.indexOf('TEAM');
-        const rankIdx = h.indexOf('RANK');
-        if (pidIdx === -1) continue;
+      for (const row of rs.rowSet ?? []) {
+        const fromYear = parseInt(row[fromIdx] ?? 0);
+        const toYear   = parseInt(row[toIdx]   ?? 0);
+        // Keep players active since 1994 (last 30 years)
+        if (toYear < 1994 && fromYear < 1994) continue;
 
-        for (const row of (rs.rowSet ?? []).slice(0, 25)) {
-          const pid = String(row[pidIdx]);
-          const name = row[nameIdx] ?? '';
-          const teamAbbr = row[teamIdx] ?? '';
-          if (!pid) continue;
-          if (!byId.has(pid)) {
-            byId.set(pid, { name, awards: new Set(), teams: new Set(), positions: [], country: 'USA' });
-          }
-          const p = byId.get(pid);
-          const teamName = NBA_TEAM_ABBREVS[teamAbbr];
-          if (teamName) p.teams.add(teamName);
-          if (rankIdx !== -1 && row[rankIdx] === 1 && cat === 'PTS') p.awards.add('Scoring Title');
-        }
-        nbaSeasons++;
-      } catch { /* skip individual season failures */ }
+        const pid     = String(row[pidIdx]);
+        const name    = `${row[firstIdx] ?? ''} ${row[lastIdx] ?? ''}`.trim();
+        if (!name || !pid) continue;
+
+        const country = NBA_COUNTRIES[row[countryIdx]] ?? row[countryIdx] ?? 'USA';
+        const posRaw  = (row[posIdx] ?? '').split('-')[0].trim();
+
+        byId.set(pid, {
+          name,
+          country,
+          positions: posRaw ? [posRaw] : [],
+          teams: new Set(),
+          awards: new Set(),
+        });
+      }
     }
-    console.log(`  Got ${label} leaders from ${nbaSeasons} seasons, ${byId.size} unique players total`);
+    console.log(`  Player index: ${byId.size} players active since 1994`);
+  } catch (e) {
+    console.warn(`  ⚠ playerindex failed: ${e.message} — falling back to stat leaders`);
   }
 
-  // 2. Enrich each player with bio + awards + career teams
+  // Step 2 & 3: Per player — career teams + awards (both cached after first run)
+  console.log(`  Fetching career teams + awards for ${byId.size} players...`);
   const players = [];
   let done = 0;
   for (const [pid, p] of byId) {
     done++;
-    if (done % 100 === 0) console.log(`  Progress: ${done}/${byId.size}`);
-
-    try {
-      const bioD = await get(
-        `https://stats.nba.com/stats/commonplayerinfo?PlayerID=${pid}`,
-        `nba-player-${pid}`,
-        NBA_HEADERS,
-      );
-      const bioRS = bioD.resultSets?.find(r => r.name === 'CommonPlayerInfo');
-      if (bioRS?.rowSet?.[0]) {
-        const row = bioRS.rowSet[0];
-        const h = bioRS.headers;
-        const name = row[h.indexOf('DISPLAY_FIRST_LAST')] ?? p.name;
-        const country = NBA_COUNTRIES[row[h.indexOf('COUNTRY')]] ?? row[h.indexOf('COUNTRY')] ?? 'USA';
-        const posRaw = row[h.indexOf('POSITION')] ?? '';
-        const pos = posRaw.split('-')[0].trim(); // "Guard-Forward" → "Guard"
-        if (name) p.name = name;
-        p.country = country;
-        if (pos) p.positions = [pos];
-      }
-    } catch { /* bio optional */ }
-
-    try {
-      const awardD = await get(
-        `https://stats.nba.com/stats/playerawards?PlayerID=${pid}`,
-        `nba-awards-${pid}`,
-        NBA_HEADERS,
-      );
-      const awardRS = awardD.resultSets?.find(r => r.name === 'PlayerAwards');
-      if (awardRS) {
-        const h = awardRS.headers;
-        const descIdx = h.indexOf('DESCRIPTION');
-        for (const row of awardRS.rowSet ?? []) {
-          const desc = row[descIdx] ?? '';
-          const ourAward = Object.entries(NBA_AWARD_KEYWORDS)
-            .find(([k]) => desc.includes(k))?.[1];
-          if (ourAward) p.awards.add(ourAward);
-          if (desc.includes('All-Star')) p.awards.add('All-Star');
-          if (desc.includes('Slam Dunk')) p.awards.add('Slam Dunk Contest');
-        }
-      }
-    } catch { /* awards optional */ }
+    if (done % 250 === 0) console.log(`  Progress: ${done}/${byId.size}`);
 
     try {
       const careerD = await get(
@@ -570,6 +561,29 @@ async function fetchNBA() {
         }
       }
     } catch { /* career stats optional */ }
+
+    try {
+      const awardD = await get(
+        `https://stats.nba.com/stats/playerawards?PlayerID=${pid}`,
+        `nba-awards-${pid}`,
+        NBA_HEADERS,
+      );
+      const awardRS = awardD.resultSets?.find(r => r.name === 'PlayerAwards');
+      if (awardRS) {
+        const h = awardRS.headers;
+        const descIdx = h.indexOf('DESCRIPTION');
+        for (const row of awardRS.rowSet ?? []) {
+          const desc = row[descIdx] ?? '';
+          const ourAward = Object.entries(NBA_AWARD_KEYWORDS).find(([k]) => desc.includes(k))?.[1];
+          if (ourAward) p.awards.add(ourAward);
+          if (desc.includes('All-Star'))  p.awards.add('All-Star');
+          if (desc.includes('Slam Dunk')) p.awards.add('Slam Dunk Contest');
+        }
+      }
+    } catch { /* awards optional */ }
+
+    // Skip players who never appeared in any season
+    if (p.teams.size === 0) continue;
 
     players.push({
       id: slug(p.name),
@@ -614,12 +628,12 @@ const NFL_TEAM_NAMES = {
 // ESPN team ID → short name used in game criteria
 const ESPN_NFL_TEAM_IDS = {
   1: 'Falcons', 2: 'Bills', 3: 'Bears', 4: 'Bengals', 5: 'Browns',
-  6: 'Cowboys', 7: 'Broncos', 8: 'Lions', 9: 'Packers', 10: 'Texans',
+  6: 'Cowboys', 7: 'Broncos', 8: 'Lions', 9: 'Packers', 10: 'Titans',
   11: 'Colts', 12: 'Chiefs', 13: 'Raiders', 14: 'Rams', 15: 'Dolphins',
   16: 'Vikings', 17: 'Patriots', 18: 'Saints', 19: 'Giants', 20: 'Jets',
-  21: 'Eagles', 22: 'Steelers', 23: 'Chargers', 24: '49ers', 25: 'Seahawks',
-  26: 'Buccaneers', 27: 'Titans', 28: 'Redskins', 29: 'Panthers', 30: 'Jaguars',
-  33: 'Ravens', 34: 'Cardinals',
+  21: 'Eagles', 22: 'Cardinals', 23: 'Steelers', 24: 'Chargers', 25: '49ers',
+  26: 'Seahawks', 27: 'Buccaneers', 28: 'Redskins', 29: 'Panthers', 30: 'Jaguars',
+  33: 'Ravens', 34: 'Texans',
 };
 
 async function fetchNFL() {
@@ -674,7 +688,34 @@ async function fetchNFL() {
   }
   console.log(`  Processed ${seasonsDone} award seasons, ${byId.size} players so far`);
 
-  // 2. Stat leaders per season — top 25 in 10 key categories each year
+  // 2. Team roster discovery — every player on every NFL roster 1990-2023
+  const ESPN_NFL_ALL_TEAM_IDS = Object.keys(ESPN_NFL_TEAM_IDS).map(Number);
+  console.log(`  Discovering NFL players via team rosters (${ESPN_NFL_ALL_TEAM_IDS.length} teams × ${years.length} seasons)...`);
+  let rostersDone = 0;
+  for (const year of years) {
+    for (const teamId of ESPN_NFL_ALL_TEAM_IDS) {
+      try {
+        const d = await get(
+          `${NFL_BASE}/seasons/${year}/teams/${teamId}/athletes?limit=200`,
+          `nfl-roster-${year}-${teamId}`,
+        );
+        for (const item of d.items ?? []) {
+          const ref = item.$ref ?? '';
+          const pid = ref.split('/athletes/')[1]?.split('?')[0];
+          if (!pid) continue;
+          if (!byId.has(pid)) {
+            byId.set(pid, { name: '', awards: new Set(), teams: new Set(), positions: [] });
+          }
+          const teamName = ESPN_NFL_TEAM_IDS[teamId];
+          if (teamName) byId.get(pid).teams.add(teamName);
+        }
+        rostersDone++;
+      } catch { /* invalid season/team combo — silently skip */ }
+    }
+  }
+  console.log(`  Roster discovery: ${rostersDone} valid team-seasons, ${byId.size} players total`);
+
+  // 3. Stat leaders per season — top 25 in 10 key categories each year
   //    Gives us notable QBs, RBs, WRs, DBs, pass rushers beyond just award winners
   const STAT_CATS = [
     'passingYards', 'rushingYards', 'receivingYards',
@@ -712,7 +753,7 @@ async function fetchNFL() {
   }
   console.log(`  Stat leaders done (${statSeasonsDone} seasons), total unique players: ${byId.size}`);
 
-  // 3. Bio enrichment — name, birthPlace.country, position for every player
+  // 4. Bio enrichment — name, birthPlace.country, position for every player
   const players = [];
   let done = 0;
   for (const [pid, p] of byId) {

@@ -72,7 +72,7 @@
   .header-cell {
     @apply flex items-center justify-center text-center p-2 leading-tight;
     font-family: 'Barlow Condensed', system-ui, sans-serif;
-    font-size: 11px;
+    font-size: clamp(10px, 1.4vw, 14px);
     font-weight: 700;
     letter-spacing: 0.05em;
     text-transform: uppercase;
@@ -81,6 +81,21 @@
     border: 1px solid #1f1f1f;
     border-radius: 2px;
   }
+
+  .header-emoji {
+    font-size: clamp(12px, 1.8vw, 18px);
+    margin-bottom: 2px;
+  }
+
+  /* Responsive game grid */
+  .game-grid {
+    display: grid;
+    gap: 2px;
+    grid-template-columns: 72px repeat(3, 1fr);
+  }
+
+  .col-header { min-height: 52px; }
+  .row-header { min-height: 80px; }
 
   .sport-btn {
     @apply px-4 py-2.5 text-sm font-bold uppercase tracking-wider
@@ -107,6 +122,27 @@
   .sport-btn.inactive {
     @apply text-gray-500 hover:text-gray-300;
   }
+}
+
+/* Responsive grid scaling */
+@media (min-width: 640px) {
+  .game-grid {
+    gap: 3px;
+    grid-template-columns: 90px repeat(3, 1fr);
+  }
+  .cell-btn { min-height: 96px; }
+  .col-header { min-height: 64px; }
+  .row-header { min-height: 96px; }
+}
+
+@media (min-width: 1024px) {
+  .game-grid {
+    gap: 4px;
+    grid-template-columns: 110px repeat(3, 1fr);
+  }
+  .cell-btn { min-height: 130px; }
+  .col-header { min-height: 80px; }
+  .row-header { min-height: 130px; }
 }
 
 /* Arcade keyframes */

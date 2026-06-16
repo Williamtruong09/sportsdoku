@@ -40,7 +40,7 @@ export function Cell({ cell, isSelected, isGameOver, onClick }: Props) {
         <div className="animate-pop-in px-2 text-center">
           <div
             className="font-display font-bold leading-tight uppercase"
-            style={{ fontSize: 11, letterSpacing: '0.04em' }}
+            style={{ fontSize: 'clamp(10px, 1.5vw, 14px)', letterSpacing: '0.04em' }}
           >
             {cell.playerName}
           </div>
