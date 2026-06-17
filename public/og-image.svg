@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#000000"/>
+
+  <!-- Grid cells background -->
+  <rect x="460" y="140" width="280" height="350" rx="4" fill="#0d0d0d" stroke="#1f1f1f" stroke-width="1"/>
+
+  <!-- Grid lines vertical -->
+  <line x1="554" y1="140" x2="554" y2="490" stroke="#1f1f1f" stroke-width="1"/>
+  <line x1="648" y1="140" x2="648" y2="490" stroke="#1f1f1f" stroke-width="1"/>
+  <line x1="742" y1="140" x2="742" y2="490" stroke="#1f1f1f" stroke-width="1"/>
+
+  <!-- Grid lines horizontal -->
+  <line x1="460" y1="257" x2="740" y2="257" stroke="#1f1f1f" stroke-width="1"/>
+  <line x1="460" y1="373" x2="740" y2="373" stroke="#1f1f1f" stroke-width="1"/>
+
+  <!-- Header row cells -->
+  <rect x="461" y="141" width="92" height="115" rx="0" fill="#0d0d0d"/>
+  <text x="507" y="210" font-family="monospace" font-size="28" fill="#f97316" text-anchor="middle">🏆</text>
+
+  <rect x="555" y="141" width="92" height="115" rx="0" fill="#0d0d0d"/>
+  <text x="601" y="210" font-family="monospace" font-size="28" fill="#f97316" text-anchor="middle">🌟</text>
+
+  <rect x="649" y="141" width="92" height="115" rx="0" fill="#0d0d0d"/>
+  <text x="695" y="210" font-family="monospace" font-size="28" fill="#f97316" text-anchor="middle">🛡️</text>
+
+  <!-- Left column cells -->
+  <rect x="461" y="258" width="92" height="115" rx="0" fill="#0d0d0d"/>
+  <text x="507" y="327" font-family="monospace" font-size="28" fill="#f97316" text-anchor="middle">🏀</text>
+
+  <rect x="461" y="374" width="92" height="115" rx="0" fill="#0d0d0d"/>
+  <text x="507" y="443" font-family="monospace" font-size="28" fill="#f97316" text-anchor="middle">🏈</text>
+
+  <!-- Inner cells - some filled -->
+  <rect x="555" y="258" width="92" height="115" rx="0" fill="#1a1a0a"/>
+  <text x="601" y="320" font-family="monospace" font-size="11" fill="#f97316" text-anchor="middle" font-weight="bold">LEBRON</text>
+  <text x="601" y="338" font-family="monospace" font-size="11" fill="#f97316" text-anchor="middle" font-weight="bold">JAMES</text>
+
+  <rect x="649" y="258" width="92" height="115" rx="0" fill="#1a1a0a"/>
+  <text x="695" y="320" font-family="monospace" font-size="11" fill="#f97316" text-anchor="middle" font-weight="bold">MICHAEL</text>
+  <text x="695" y="338" font-family="monospace" font-size="11" fill="#f97316" text-anchor="middle" font-weight="bold">JORDAN</text>
+
+  <rect x="555" y="374" width="92" height="115" rx="0" fill="#0d0d0d"/>
+  <rect x="649" y="374" width="92" height="115" rx="0" fill="#0d0d0d"/>
+
+  <!-- Title text -->
+  <text x="600" y="90" font-family="'Courier New', monospace" font-size="52" font-weight="900" fill="#ffffff" text-anchor="middle" letter-spacing="6">SPORDOKU</text>
+
+  <!-- Tagline -->
+  <text x="600" y="560" font-family="'Courier New', monospace" font-size="18" fill="#374151" text-anchor="middle" letter-spacing="3">DAILY SPORTS TRIVIA GRID · NBA · NFL · MLB · NHL · SOCCER</text>
+
+  <!-- Orange accent line under title -->
+  <rect x="400" y="100" width="400" height="2" fill="#f97316" rx="1"/>
+</svg>

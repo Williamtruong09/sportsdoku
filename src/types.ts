@@ -8,6 +8,7 @@ export interface Player {
   sport: Sport;
   teams: string[];
   awards: string[];
+  awardTeams?: Record<string, string[]>; // award name → teams where it was won
   country: string;
   positions: string[];
 }

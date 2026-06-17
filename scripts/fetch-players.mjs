@@ -75,7 +75,8 @@ function writeTS(sport, players) {
 
   const lines = unique.map(p => {
     const name = p.name.replace(/'/g, "\\'");
-    return `  { id: '${p.id}', name: '${name}', sport: '${sport}', teams: ${JSON.stringify(p.teams)}, awards: ${JSON.stringify(p.awards)}, country: '${p.country}', positions: ${JSON.stringify(p.positions)} }`;
+    const awardTeams = p.awardTeams ?? {};
+    return `  { id: '${p.id}', name: '${name}', sport: '${sport}', teams: ${JSON.stringify(p.teams)}, awards: ${JSON.stringify(p.awards)}, awardTeams: ${JSON.stringify(awardTeams)}, country: '${p.country}', positions: ${JSON.stringify(p.positions)} }`;
   });
 
   const content = [
@@ -103,6 +104,17 @@ const MLB_AWARD_IDS = {
   ALROY: 'Rookie of Year', NLROY: 'Rookie of Year',
   ALGG: 'Gold Glove', NLGG: 'Gold Glove',
   WSMVP: 'World Series MVP',
+};
+
+const MLB_TEAM_IDS = {
+  108: 'Angels', 109: 'Diamondbacks', 110: 'Orioles', 111: 'Red Sox',
+  112: 'Cubs', 113: 'Reds', 114: 'Indians', 115: 'Rockies',
+  116: 'Tigers', 117: 'Astros', 118: 'Royals', 119: 'Dodgers',
+  120: 'Nationals', 121: 'Mets', 133: 'Athletics', 134: 'Pirates',
+  135: 'Padres', 136: 'Mariners', 137: 'Giants', 138: 'Cardinals',
+  139: 'Rays', 140: 'Rangers', 141: 'Blue Jays', 142: 'Twins',
+  143: 'Phillies', 144: 'Braves', 145: 'White Sox', 146: 'Marlins',
+  147: 'Yankees', 158: 'Brewers', 137: 'Giants',
 };
 
 const MLB_TEAM_NAMES = {
@@ -156,7 +168,7 @@ async function fetchMLB() {
         const country = MLB_COUNTRIES[person.birthCountry] ?? person.birthCountry ?? 'USA';
         const pos = person.primaryPosition?.abbreviation;
         if (!byId.has(key)) {
-          byId.set(key, { name: person.fullName ?? '', awards: new Set(), teams: new Set(), positions: pos ? [pos] : [], country });
+          byId.set(key, { name: person.fullName ?? '', awards: new Set(), teams: new Set(), positions: pos ? [pos] : [], country, awardTeams: {} });
         }
         if (teamName) byId.get(key).teams.add(teamName);
       }
@@ -178,9 +190,16 @@ async function fetchMLB() {
         if (!p?.id) continue;
         const key = String(p.id);
         if (!byId.has(key)) {
-          byId.set(key, { name: p.fullName ?? p.nameFirstLast ?? '', awards: new Set(), teams: new Set(), positions: [], country: 'USA' });
+          byId.set(key, { name: p.fullName ?? p.nameFirstLast ?? '', awards: new Set(), teams: new Set(), positions: [], country: 'USA', awardTeams: {} });
         }
-        byId.get(key).awards.add(ourAward);
+        const rec = byId.get(key);
+        rec.awards.add(ourAward);
+        const teamShort = MLB_TEAM_IDS[entry.team?.id];
+        if (teamShort) {
+          if (!rec.awardTeams[ourAward]) rec.awardTeams[ourAward] = new Set();
+          rec.awardTeams[ourAward].add(teamShort);
+          rec.teams.add(teamShort);
+        }
       }
     } catch (e) {
       console.warn(`  ⚠ MLB award ${awardId}: ${e.message}`);
@@ -232,6 +251,7 @@ async function fetchMLB() {
       sport: 'mlb',
       teams: [...p.teams],
       awards: [...p.awards],
+      awardTeams: Object.fromEntries(Object.entries(p.awardTeams).map(([k, v]) => [k, [...v]])),
       country: p.country,
       positions: p.positions,
     });
@@ -333,7 +353,7 @@ async function fetchNHL() {
         if (!p.id) continue;
         const pid = String(p.id);
         if (!byId.has(pid)) {
-          byId.set(pid, { name: `${p.firstName?.default ?? ''} ${p.lastName?.default ?? ''}`.trim(), awards: new Set(), teams: new Set(), positions: [], country: 'Canada' });
+          byId.set(pid, { name: `${p.firstName?.default ?? ''} ${p.lastName?.default ?? ''}`.trim(), awards: new Set(), teams: new Set(), positions: [], country: 'Canada', awardTeams: {} });
         }
       }
       skaterSeasons++;
@@ -353,7 +373,7 @@ async function fetchNHL() {
         if (!p.id) continue;
         const pid = String(p.id);
         if (!byId.has(pid)) {
-          byId.set(pid, { name: `${p.firstName?.default ?? ''} ${p.lastName?.default ?? ''}`.trim(), awards: new Set(), teams: new Set(), positions: ['G'], country: 'Canada' });
+          byId.set(pid, { name: `${p.firstName?.default ?? ''} ${p.lastName?.default ?? ''}`.trim(), awards: new Set(), teams: new Set(), positions: ['G'], country: 'Canada', awardTeams: {} });
         }
       }
       goalieSeasons++;
@@ -387,17 +407,35 @@ async function fetchNHL() {
         if (t) p.teams.add(t);
       }
 
+      // Build season→team lookup from NHL season totals for award team matching
+      const nhlSeasonTeam = new Map();
+      for (const s of d.seasonTotals ?? []) {
+        if (s.leagueAbbrev !== 'NHL') continue;
+        const t = NHL_TEAM_NAMES[s.teamName?.default ?? ''];
+        if (t && s.season) nhlSeasonTeam.set(String(s.season), t);
+      }
+
       // Awards — fuzzy matching handles encoding variants (curly quotes, etc.)
       for (const award of d.awards ?? []) {
         const t = award.trophy?.default ?? '';
-        if (t.includes('Hart')) p.awards.add('Hart Trophy');
-        if (t.includes('Art Ross')) p.awards.add('Art Ross');
-        if (t.includes('Conn Smythe')) p.awards.add('Conn Smythe');
-        if (t.includes('Norris')) p.awards.add('Norris Trophy');
-        if (t.includes('Vezina')) p.awards.add('Vezina Trophy');
-        if (t.includes('Calder')) p.awards.add('Calder Trophy');
-        if (t.includes('Rocket') || t.includes('Richard')) p.awards.add('Rocket Richard Trophy');
-        if (t.toLowerCase().includes('stanley')) p.awards.add('Stanley Cup');
+        let ourAward = null;
+        if (t.includes('Hart')) ourAward = 'Hart Trophy';
+        else if (t.includes('Art Ross')) ourAward = 'Art Ross';
+        else if (t.includes('Conn Smythe')) ourAward = 'Conn Smythe';
+        else if (t.includes('Norris')) ourAward = 'Norris Trophy';
+        else if (t.includes('Vezina')) ourAward = 'Vezina Trophy';
+        else if (t.includes('Calder')) ourAward = 'Calder Trophy';
+        else if (t.includes('Rocket') || t.includes('Richard')) ourAward = 'Rocket Richard Trophy';
+        else if (t.toLowerCase().includes('stanley')) ourAward = 'Stanley Cup';
+        if (!ourAward) continue;
+        p.awards.add(ourAward);
+        // Record which team they were on when they won it
+        const seasonId = String(award.seasons?.[0]?.seasonId ?? '');
+        const awardTeam = nhlSeasonTeam.get(seasonId);
+        if (awardTeam) {
+          if (!p.awardTeams[ourAward]) p.awardTeams[ourAward] = new Set();
+          p.awardTeams[ourAward].add(awardTeam);
+        }
       }
 
       players.push({
@@ -406,6 +444,7 @@ async function fetchNHL() {
         sport: 'nhl',
         teams: [...p.teams],
         awards: [...p.awards],
+        awardTeams: Object.fromEntries(Object.entries(p.awardTeams).map(([k, v]) => [k, [...v]])),
         country: p.country,
         positions: p.positions,
       });
@@ -513,8 +552,8 @@ async function fetchNBA() {
       for (const row of rs.rowSet ?? []) {
         const fromYear = parseInt(row[fromIdx] ?? 0);
         const toYear   = parseInt(row[toIdx]   ?? 0);
-        // Keep players active since 1994 (last 30 years)
-        if (toYear < 1994 && fromYear < 1994) continue;
+        // Keep players active since 1975 (covers Bird, Magic, Kareem, Dr. J era and forward)
+        if (toYear < 1975 && fromYear < 1975) continue;
 
         const pid     = String(row[pidIdx]);
         const name    = `${row[firstIdx] ?? ''} ${row[lastIdx] ?? ''}`.trim();
@@ -529,6 +568,7 @@ async function fetchNBA() {
           positions: posRaw ? [posRaw] : [],
           teams: new Set(),
           awards: new Set(),
+          awardTeams: {},
         });
       }
     }
@@ -572,14 +612,23 @@ async function fetchNBA() {
       if (awardRS) {
         const h = awardRS.headers;
         const descIdx = h.indexOf('DESCRIPTION');
+        const teamIdx = h.indexOf('TEAM');
         for (const row of awardRS.rowSet ?? []) {
           const desc = row[descIdx] ?? '';
+          const teamFull = row[teamIdx] ?? '';
+          const teamShort = NBA_TEAM_NAMES[teamFull];
+          const addAwardTeam = (award) => {
+            if (!teamShort) return;
+            if (!p.awardTeams[award]) p.awardTeams[award] = new Set();
+            p.awardTeams[award].add(teamShort);
+          };
           // Handle All-Star / Slam Dunk first and skip season-award matching
           // (prevents "All-Star Most Valuable Player" from falsely mapping to MVP)
-          if (desc.includes('All-Star')) { p.awards.add('All-Star'); continue; }
-          if (desc.includes('Slam Dunk')) { p.awards.add('Slam Dunk Contest'); continue; }
+          if (desc.includes('All-Star')) { p.awards.add('All-Star'); addAwardTeam('All-Star'); continue; }
+          if (desc.includes('Slam Dunk')) { p.awards.add('Slam Dunk Contest'); addAwardTeam('Slam Dunk Contest'); continue; }
+          if (desc.includes('Cup Most Valuable Player')) continue; // skip NBA Cup/In-Season Tournament MVP
           const ourAward = Object.entries(NBA_AWARD_KEYWORDS).find(([k]) => desc.includes(k))?.[1];
-          if (ourAward) p.awards.add(ourAward);
+          if (ourAward) { p.awards.add(ourAward); addAwardTeam(ourAward); }
         }
       }
     } catch { /* awards optional */ }
@@ -593,6 +642,7 @@ async function fetchNBA() {
       sport: 'nba',
       teams: [...p.teams],
       awards: [...p.awards],
+      awardTeams: Object.fromEntries(Object.entries(p.awardTeams).map(([k, v]) => [k, [...v]])),
       country: p.country,
       positions: p.positions,
     });
@@ -640,7 +690,7 @@ const ESPN_NFL_TEAM_IDS = {
 
 async function fetchNFL() {
   console.log('\n=== NFL ===');
-  const byId = new Map(); // pid → { name, awards, teams, positions }
+  const byId = new Map(); // pid → { name, awards, teams, positions, awardTeams }
 
   const years = [];
   for (let y = 1990; y <= 2023; y++) years.push(y);
@@ -671,15 +721,23 @@ async function fetchNFL() {
             const teamId = parseInt(teamRef?.split('/teams/')[1]?.split('?')[0] ?? '0');
             const teamName = ESPN_NFL_TEAM_IDS[teamId];
             if (!byId.has(pid)) {
-              byId.set(pid, { name: '', awards: new Set(), teams: new Set(), positions: [] });
+              byId.set(pid, { name: '', awards: new Set(), teams: new Set(), positions: [], awardTeams: {} });
             }
             const p = byId.get(pid);
             p.awards.add(ourAward);
-            if (['MVP', 'Super Bowl MVP', 'DPOY', 'Offensive ROY'].includes(ourAward)) {
-              p.awards.add('Pro Bowl');
-              p.awards.add('All-Pro');
+            if (teamName) {
+              p.teams.add(teamName);
+              if (!p.awardTeams[ourAward]) p.awardTeams[ourAward] = new Set();
+              p.awardTeams[ourAward].add(teamName);
+              if (['MVP', 'Super Bowl MVP', 'DPOY', 'Offensive ROY'].includes(ourAward)) {
+                p.awards.add('Pro Bowl');
+                p.awards.add('All-Pro');
+                if (!p.awardTeams['Pro Bowl']) p.awardTeams['Pro Bowl'] = new Set();
+                p.awardTeams['Pro Bowl'].add(teamName);
+                if (!p.awardTeams['All-Pro']) p.awardTeams['All-Pro'] = new Set();
+                p.awardTeams['All-Pro'].add(teamName);
+              }
             }
-            if (teamName) p.teams.add(teamName);
           }
         } catch { /* skip individual award errors */ }
       }
@@ -706,7 +764,7 @@ async function fetchNFL() {
           const pid = ref.split('/athletes/')[1]?.split('?')[0];
           if (!pid) continue;
           if (!byId.has(pid)) {
-            byId.set(pid, { name: '', awards: new Set(), teams: new Set(), positions: [] });
+            byId.set(pid, { name: '', awards: new Set(), teams: new Set(), positions: [], awardTeams: {} });
           }
           const teamName = ESPN_NFL_TEAM_IDS[teamId];
           if (teamName) byId.get(pid).teams.add(teamName);
@@ -743,7 +801,7 @@ async function fetchNFL() {
           const teamId = parseInt(teamRef?.split('/teams/')[1]?.split('?')[0] ?? '0');
           const teamName = ESPN_NFL_TEAM_IDS[teamId];
           if (!byId.has(pid)) {
-            byId.set(pid, { name: '', awards: new Set(), teams: new Set(), positions: [] });
+            byId.set(pid, { name: '', awards: new Set(), teams: new Set(), positions: [], awardTeams: {} });
           }
           if (teamName) byId.get(pid).teams.add(teamName);
         }
@@ -781,6 +839,7 @@ async function fetchNFL() {
         sport: 'nfl',
         teams: [...p.teams],
         awards: [...p.awards],
+        awardTeams: Object.fromEntries(Object.entries(p.awardTeams).map(([k, v]) => [k, [...v]])),
         country: d.birthPlace?.country ?? 'USA',
         positions: p.positions,
       });
@@ -841,7 +900,8 @@ async function fetchSoccer() {
   const byId = new Map();
 
   const LEAGUE_IDS = ['PL', 'PD', 'BL1', 'SA', 'FL1']; // major domestic leagues
-  const SEASONS = [2021, 2022, 2023, 2024];
+  const SEASONS = [];
+  for (let y = 2000; y <= 2024; y++) SEASONS.push(y);
 
   // 1. Top scorers across multiple seasons (gives us goal-scorers / star attackers)
   console.log(`  Fetching top scorers (${LEAGUE_IDS.length} leagues × ${SEASONS.length} seasons)...`);
@@ -859,7 +919,7 @@ async function fetchSoccer() {
           if (!p?.id) continue;
           const key = String(p.id);
           if (!byId.has(key)) {
-            byId.set(key, { name: p.name, nationality: p.nationality ?? 'Unknown', awards: new Set(), teams: new Set(), positions: [mapSoccerPos(p.position)].filter(Boolean) });
+            byId.set(key, { name: p.name, nationality: p.nationality ?? 'Unknown', awards: new Set(), teams: new Set(), positions: [mapSoccerPos(p.position)].filter(Boolean), awardTeams: {} });
           }
           byId.get(key).awards.add(leagueName);
           const t = SOCCER_TEAM_NAMES[entry.team?.name] ?? entry.team?.shortName;
@@ -872,14 +932,15 @@ async function fetchSoccer() {
   }
   console.log(`  After scorers: ${byId.size} players`);
 
-  // 2. Full team squads — squad data is included inline in the /competitions/{id}/teams response
-  console.log(`  Fetching team squads (inline from competition teams endpoint)...`);
+  // 2. Full team squads per season — captures historical players (Iniesta, Xavi, Puyol etc.)
+  console.log(`  Fetching team squads (${LEAGUE_IDS.length} leagues × ${SEASONS.length} seasons)...`);
   for (const leagueId of LEAGUE_IDS) {
     const leagueName = FD_LEAGUES[leagueId];
+    for (const season of SEASONS) {
     try {
       const d = await get(
-        `${FD_BASE}/competitions/${leagueId}/teams?season=2024`,
-        `soccer-teams-${leagueId}-2024`,
+        `${FD_BASE}/competitions/${leagueId}/teams?season=${season}`,
+        `soccer-teams-${leagueId}-${season}`,
         fdHeaders,
       );
       let added = 0;
@@ -889,17 +950,17 @@ async function fetchSoccer() {
           if (!player.id) continue;
           const key = String(player.id);
           if (!byId.has(key)) {
-            byId.set(key, { name: player.name, nationality: player.nationality ?? 'Unknown', awards: new Set(), teams: new Set(), positions: [mapSoccerPos(player.position)].filter(Boolean) });
+            byId.set(key, { name: player.name, nationality: player.nationality ?? 'Unknown', awards: new Set(), teams: new Set(), positions: [mapSoccerPos(player.position)].filter(Boolean), awardTeams: {} });
             added++;
           }
           byId.get(key).awards.add(leagueName);
           if (teamShort) byId.get(key).teams.add(teamShort);
         }
       }
-      console.log(`  League ${leagueId}: ${(d.teams ?? []).length} teams, +${added} new players`);
     } catch (e) {
-      console.warn(`  ⚠ Soccer teams ${leagueId}: ${e.message}`);
+      console.warn(`  ⚠ Soccer teams ${leagueId} ${season}: ${e.message}`);
     }
+    } // end season loop
   }
   console.log(`  After squads: ${byId.size} total players`);
 
@@ -909,9 +970,529 @@ async function fetchSoccer() {
     sport: 'soccer',
     teams: [...p.teams],
     awards: [...p.awards],
+    awardTeams: {},
     country: mapSoccerNationality(p.nationality),
     positions: p.positions,
   }));
+
+  // Historical players not in the API's free tier — broad supplement covering major leagues 1990-2020
+  const supplement = [
+    // ── SPAIN ──────────────────────────────────────────────────────────────────
+    // ── SPAIN ──────────────────────────────────────────────────────────────────
+    { name: 'Andrés Iniesta', country: 'Spain', teams: ['Barcelona'], awards: ['La Liga'], positions: ['Midfielder'] },
+    { name: 'Xavi', country: 'Spain', teams: ['Barcelona', 'Al Sadd'], awards: ['La Liga'], positions: ['Midfielder'] },
+    { name: 'Carles Puyol', country: 'Spain', teams: ['Barcelona'], awards: ['La Liga'], positions: ['Defender'] },
+    { name: 'Cesc Fàbregas', country: 'Spain', teams: ['Arsenal', 'Barcelona', 'Chelsea', 'Monaco'], awards: ['Premier League', 'La Liga'], positions: ['Midfielder'] },
+    { name: 'Fernando Torres', country: 'Spain', teams: ['Atletico Madrid', 'Liverpool', 'Chelsea'], awards: ['Premier League', 'La Liga'], positions: ['Forward'] },
+    { name: 'David Villa', country: 'Spain', teams: ['Valencia', 'Barcelona', 'Atletico Madrid'], awards: ['La Liga'], positions: ['Forward'] },
+    { name: 'Xabi Alonso', country: 'Spain', teams: ['Real Sociedad', 'Liverpool', 'Real Madrid', 'Bayern Munich'], awards: ['Premier League', 'La Liga', 'Bundesliga'], positions: ['Midfielder'] },
+    { name: 'Iker Casillas', country: 'Spain', teams: ['Real Madrid'], awards: ['La Liga'], positions: ['Goalkeeper'] },
+    { name: 'Raúl', country: 'Spain', teams: ['Real Madrid'], awards: ['La Liga'], positions: ['Forward'] },
+    { name: 'David Silva', country: 'Spain', teams: ['Valencia', 'Manchester City'], awards: ['Premier League', 'La Liga'], positions: ['Midfielder'] },
+    { name: 'Juan Mata', country: 'Spain', teams: ['Valencia', 'Chelsea', 'Manchester United'], awards: ['Premier League', 'La Liga'], positions: ['Midfielder'] },
+    { name: 'Pepe Reina', country: 'Spain', teams: ['Liverpool', 'Napoli'], awards: ['Premier League', 'Serie A'], positions: ['Goalkeeper'] },
+    { name: 'Alvaro Morata', country: 'Spain', teams: ['Real Madrid', 'Juventus', 'Chelsea', 'Atletico Madrid'], awards: ['La Liga', 'Serie A', 'Premier League'], positions: ['Forward'] },
+    { name: 'Jordi Alba', country: 'Spain', teams: ['Barcelona'], awards: ['La Liga'], positions: ['Defender'] },
+    { name: 'Sergio Busquets', country: 'Spain', teams: ['Barcelona'], awards: ['La Liga'], positions: ['Midfielder'] },
+    { name: 'Gerard Piqué', country: 'Spain', teams: ['Manchester United', 'Barcelona'], awards: ['Premier League', 'La Liga'], positions: ['Defender'] },
+    { name: 'Dani Carvajal', country: 'Spain', teams: ['Real Madrid'], awards: ['La Liga'], positions: ['Defender'] },
+    { name: 'Nacho Fernández', country: 'Spain', teams: ['Real Madrid'], awards: ['La Liga'], positions: ['Defender'] },
+    { name: 'Santi Cazorla', country: 'Spain', teams: ['Villarreal', 'Malaga', 'Arsenal'], awards: ['Premier League', 'La Liga'], positions: ['Midfielder'] },
+    { name: 'Jesús Navas', country: 'Spain', teams: ['Sevilla', 'Manchester City'], awards: ['Premier League', 'La Liga'], positions: ['Midfielder'] },
+    { name: 'Míchel Salgado', country: 'Spain', teams: ['Real Madrid'], awards: ['La Liga'], positions: ['Defender'] },
+    { name: 'Fernando Hierro', country: 'Spain', teams: ['Real Madrid'], awards: ['La Liga'], positions: ['Defender'] },
+    { name: 'Alfonso', country: 'Spain', teams: ['Real Betis'], awards: ['La Liga'], positions: ['Forward'] },
+    { name: 'Víctor Valdés', country: 'Spain', teams: ['Barcelona'], awards: ['La Liga'], positions: ['Goalkeeper'] },
+    { name: 'Albert Celades', country: 'Spain', teams: ['Barcelona', 'Real Madrid'], awards: ['La Liga'], positions: ['Midfielder'] },
+    // ── FRANCE ─────────────────────────────────────────────────────────────────
+    { name: 'Zinedine Zidane', country: 'France', teams: ['Juventus', 'Real Madrid'], awards: ['La Liga', 'Serie A'], positions: ['Midfielder'] },
+    { name: 'Thierry Henry', country: 'France', teams: ['Arsenal', 'Barcelona'], awards: ['Premier League', 'La Liga'], positions: ['Forward'] },
+    { name: 'Patrick Vieira', country: 'France', teams: ['Arsenal', 'Juventus', 'Inter Milan', 'Manchester City'], awards: ['Premier League', 'Serie A'], positions: ['Midfielder'] },
+    { name: 'Robert Pirès', country: 'France', teams: ['Arsenal', 'Villarreal'], awards: ['Premier League', 'La Liga'], positions: ['Midfielder'] },
+    { name: 'Lilian Thuram', country: 'France', teams: ['Parma', 'Juventus', 'Barcelona'], awards: ['La Liga', 'Serie A'], positions: ['Defender'] },
+    { name: 'Marcel Desailly', country: 'France', teams: ['Milan', 'Chelsea'], awards: ['Premier League', 'Serie A'], positions: ['Defender'] },
+    { name: 'Claude Makélélé', country: 'France', teams: ['Real Madrid', 'Chelsea'], awards: ['Premier League', 'La Liga'], positions: ['Midfielder'] },
+    { name: 'Nicolas Anelka', country: 'France', teams: ['Arsenal', 'Real Madrid', 'Liverpool', 'Manchester City', 'Chelsea'], awards: ['Premier League', 'La Liga'], positions: ['Forward'] },
+    { name: 'William Gallas', country: 'France', teams: ['Chelsea', 'Arsenal'], awards: ['Premier League'], positions: ['Defender'] },
+    { name: 'David Trezeguet', country: 'France', teams: ['Monaco', 'Juventus'], awards: ['Ligue 1', 'Serie A'], positions: ['Forward'] },
+    { name: 'Sylvain Wiltord', country: 'France', teams: ['Marseille', 'Arsenal', 'Lyon'], awards: ['Premier League', 'Ligue 1'], positions: ['Forward'] },
+    { name: 'Florent Malouda', country: 'France', teams: ['Lyon', 'Chelsea'], awards: ['Premier League', 'Ligue 1'], positions: ['Midfielder'] },
+    { name: 'Éric Abidal', country: 'France', teams: ['Lyon', 'Barcelona'], awards: ['La Liga', 'Ligue 1'], positions: ['Defender'] },
+    { name: 'Franck Ribéry', country: 'France', teams: ['Marseille', 'Bayern Munich'], awards: ['Bundesliga', 'Ligue 1'], positions: ['Midfielder'] },
+    { name: 'Samir Nasri', country: 'France', teams: ['Marseille', 'Arsenal', 'Manchester City'], awards: ['Premier League', 'Ligue 1'], positions: ['Midfielder'] },
+    { name: 'Gael Clichy', country: 'France', teams: ['Arsenal', 'Manchester City'], awards: ['Premier League'], positions: ['Defender'] },
+    { name: 'Olivier Giroud', country: 'France', teams: ['Arsenal', 'Chelsea', 'Milan'], awards: ['Premier League', 'Serie A'], positions: ['Forward'] },
+    { name: 'Bacary Sagna', country: 'France', teams: ['Arsenal', 'Manchester City'], awards: ['Premier League'], positions: ['Defender'] },
+    { name: 'Emmanuel Petit', country: 'France', teams: ['Arsenal', 'Barcelona', 'Chelsea'], awards: ['Premier League', 'La Liga'], positions: ['Midfielder'] },
+    { name: 'Ludovic Giuly', country: 'France', teams: ['Monaco', 'Barcelona', 'Roma'], awards: ['La Liga', 'Ligue 1', 'Serie A'], positions: ['Midfielder'] },
+    { name: 'Sidney Govou', country: 'France', teams: ['Lyon'], awards: ['Ligue 1'], positions: ['Forward'] },
+    { name: 'Juninho', country: 'Brazil', teams: ['Lyon'], awards: ['Ligue 1'], positions: ['Midfielder'] },
+    // ── BRAZIL ─────────────────────────────────────────────────────────────────
+    { name: 'Ronaldinho', country: 'Brazil', teams: ['PSG', 'Barcelona', 'Milan'], awards: ['La Liga', 'Ligue 1', 'Serie A'], positions: ['Forward'] },
+    { name: 'Ronaldo', country: 'Brazil', teams: ['Barcelona', 'Inter Milan', 'Real Madrid'], awards: ['La Liga', 'Serie A'], positions: ['Forward'] },
+    { name: 'Roberto Carlos', country: 'Brazil', teams: ['Inter Milan', 'Real Madrid'], awards: ['La Liga', 'Serie A'], positions: ['Defender'] },
+    { name: 'Cafu', country: 'Brazil', teams: ['Roma', 'Milan'], awards: ['Serie A'], positions: ['Defender'] },
+    { name: 'Kaká', country: 'Brazil', teams: ['Milan', 'Real Madrid'], awards: ['La Liga', 'Serie A'], positions: ['Midfielder'] },
+    { name: 'Rivaldo', country: 'Brazil', teams: ['Barcelona', 'Milan'], awards: ['La Liga', 'Serie A'], positions: ['Midfielder'] },
+    { name: 'Adriano', country: 'Brazil', teams: ['Inter Milan'], awards: ['Serie A'], positions: ['Forward'] },
+    { name: 'Romário', country: 'Brazil', teams: ['Barcelona'], awards: ['La Liga'], positions: ['Forward'] },
+    { name: 'Aldair', country: 'Brazil', teams: ['Roma'], awards: ['Serie A'], positions: ['Defender'] },
+    { name: 'Emerson', country: 'Brazil', teams: ['Roma', 'Juventus', 'Real Madrid'], awards: ['La Liga', 'Serie A'], positions: ['Midfielder'] },
+    { name: 'Thiago Silva', country: 'Brazil', teams: ['Milan', 'PSG', 'Chelsea'], awards: ['Serie A', 'Ligue 1', 'Premier League'], positions: ['Defender'] },
+    { name: 'Dani Alves', country: 'Brazil', teams: ['Sevilla', 'Barcelona', 'Juventus', 'PSG'], awards: ['La Liga', 'Serie A', 'Ligue 1'], positions: ['Defender'] },
+    { name: 'Maicon', country: 'Brazil', teams: ['Inter Milan', 'Roma'], awards: ['Serie A'], positions: ['Defender'] },
+    { name: 'Lúcio', country: 'Brazil', teams: ['Bayer Leverkusen', 'Bayern Munich', 'Inter Milan'], awards: ['Bundesliga', 'Serie A'], positions: ['Defender'] },
+    { name: 'Alex', country: 'Brazil', teams: ['Chelsea', 'PSG'], awards: ['Premier League', 'Ligue 1'], positions: ['Defender'] },
+    { name: 'Gilberto Silva', country: 'Brazil', teams: ['Arsenal'], awards: ['Premier League'], positions: ['Midfielder'] },
+    { name: 'Anderson', country: 'Brazil', teams: ['Manchester United'], awards: ['Premier League'], positions: ['Midfielder'] },
+    { name: 'Éder Militão', country: 'Brazil', teams: ['Real Madrid'], awards: ['La Liga'], positions: ['Defender'] },
+    { name: 'Pato', country: 'Brazil', teams: ['Milan', 'Chelsea'], awards: ['Serie A', 'Premier League'], positions: ['Forward'] },
+    { name: 'Robinho', country: 'Brazil', teams: ['Real Madrid', 'Manchester City', 'Milan'], awards: ['La Liga', 'Premier League', 'Serie A'], positions: ['Forward'] },
+    { name: 'Hulk', country: 'Brazil', teams: ['Porto', 'Zenit'], awards: ['Primeira Liga'], positions: ['Forward'] },
+    { name: 'Fred', country: 'Brazil', teams: ['Lyon', 'Manchester United'], awards: ['Ligue 1', 'Premier League'], positions: ['Forward'] },
+    // ── PORTUGAL ───────────────────────────────────────────────────────────────
+    { name: 'Luís Figo', country: 'Portugal', teams: ['Barcelona', 'Real Madrid', 'Inter Milan'], awards: ['La Liga', 'Serie A'], positions: ['Midfielder'] },
+    { name: 'Rui Costa', country: 'Portugal', teams: ['Fiorentina', 'Milan'], awards: ['Serie A'], positions: ['Midfielder'] },
+    { name: 'Deco', country: 'Portugal', teams: ['Barcelona', 'Chelsea'], awards: ['La Liga', 'Premier League'], positions: ['Midfielder'] },
+    { name: 'Nani', country: 'Portugal', teams: ['Manchester United', 'Sporting CP'], awards: ['Premier League'], positions: ['Midfielder'] },
+    { name: 'João Moutinho', country: 'Portugal', teams: ['Porto', 'Monaco', 'Wolverhampton'], awards: ['Primeira Liga', 'Premier League'], positions: ['Midfielder'] },
+    { name: 'Ricardo Carvalho', country: 'Portugal', teams: ['Porto', 'Chelsea', 'Real Madrid'], awards: ['Premier League', 'La Liga', 'Primeira Liga'], positions: ['Defender'] },
+    { name: 'Simão Sabrosa', country: 'Portugal', teams: ['Barcelona', 'Atletico Madrid'], awards: ['La Liga'], positions: ['Midfielder'] },
+    { name: 'Hélder Postiga', country: 'Portugal', teams: ['Porto', 'Tottenham'], awards: ['Premier League', 'Primeira Liga'], positions: ['Forward'] },
+    { name: 'Pepe', country: 'Portugal', teams: ['Porto', 'Real Madrid', 'Besiktas'], awards: ['La Liga', 'Primeira Liga'], positions: ['Defender'] },
+    { name: 'Vítor Baía', country: 'Portugal', teams: ['Porto', 'Barcelona'], awards: ['La Liga', 'Primeira Liga'], positions: ['Goalkeeper'] },
+    // ── NETHERLANDS ────────────────────────────────────────────────────────────
+    { name: 'Arjen Robben', country: 'Netherlands', teams: ['Chelsea', 'Real Madrid', 'Bayern Munich'], awards: ['Premier League', 'La Liga', 'Bundesliga'], positions: ['Forward'] },
+    { name: 'Wesley Sneijder', country: 'Netherlands', teams: ['Ajax', 'Real Madrid', 'Inter Milan'], awards: ['La Liga', 'Serie A'], positions: ['Midfielder'] },
+    { name: 'Robin van Persie', country: 'Netherlands', teams: ['Arsenal', 'Manchester United'], awards: ['Premier League'], positions: ['Forward'] },
+    { name: 'Ruud van Nistelrooy', country: 'Netherlands', teams: ['Manchester United', 'Real Madrid'], awards: ['Premier League', 'La Liga'], positions: ['Forward'] },
+    { name: 'Edwin van der Sar', country: 'Netherlands', teams: ['Ajax', 'Manchester United'], awards: ['Premier League'], positions: ['Goalkeeper'] },
+    { name: 'Patrick Kluivert', country: 'Netherlands', teams: ['Ajax', 'Barcelona'], awards: ['La Liga'], positions: ['Forward'] },
+    { name: 'Dennis Bergkamp', country: 'Netherlands', teams: ['Ajax', 'Arsenal'], awards: ['Premier League'], positions: ['Forward'] },
+    { name: 'Marc Overmars', country: 'Netherlands', teams: ['Arsenal'], awards: ['Premier League'], positions: ['Midfielder'] },
+    { name: 'Clarence Seedorf', country: 'Netherlands', teams: ['Ajax', 'Real Madrid', 'Inter Milan', 'Milan'], awards: ['La Liga', 'Serie A'], positions: ['Midfielder'] },
+    { name: 'Edgar Davids', country: 'Netherlands', teams: ['Ajax', 'Juventus', 'Milan', 'Barcelona'], awards: ['La Liga', 'Serie A'], positions: ['Midfielder'] },
+    { name: 'Phillip Cocu', country: 'Netherlands', teams: ['PSV', 'Barcelona'], awards: ['La Liga'], positions: ['Midfielder'] },
+    { name: 'Frank de Boer', country: 'Netherlands', teams: ['Ajax', 'Barcelona'], awards: ['La Liga'], positions: ['Defender'] },
+    { name: 'Ronald de Boer', country: 'Netherlands', teams: ['Ajax', 'Barcelona'], awards: ['La Liga'], positions: ['Midfielder'] },
+    { name: 'Giovanni van Bronckhorst', country: 'Netherlands', teams: ['Arsenal', 'Barcelona'], awards: ['Premier League', 'La Liga'], positions: ['Defender'] },
+    { name: 'Jaap Stam', country: 'Netherlands', teams: ['Manchester United', 'Lazio', 'Milan'], awards: ['Premier League', 'Serie A'], positions: ['Defender'] },
+    { name: 'Mark van Bommel', country: 'Netherlands', teams: ['PSV', 'Barcelona', 'Bayern Munich', 'Milan'], awards: ['La Liga', 'Bundesliga', 'Serie A'], positions: ['Midfielder'] },
+    // ── GERMANY ────────────────────────────────────────────────────────────────
+    { name: 'Oliver Kahn', country: 'Germany', teams: ['Bayern Munich'], awards: ['Bundesliga'], positions: ['Goalkeeper'] },
+    { name: 'Michael Ballack', country: 'Germany', teams: ['Bayern Munich', 'Chelsea'], awards: ['Premier League', 'Bundesliga'], positions: ['Midfielder'] },
+    { name: 'Bastian Schweinsteiger', country: 'Germany', teams: ['Bayern Munich', 'Manchester United'], awards: ['Bundesliga', 'Premier League'], positions: ['Midfielder'] },
+    { name: 'Philipp Lahm', country: 'Germany', teams: ['Bayern Munich'], awards: ['Bundesliga'], positions: ['Defender'] },
+    { name: 'Miroslav Klose', country: 'Germany', teams: ['Werder Bremen', 'Bayern Munich', 'Lazio'], awards: ['Bundesliga', 'Serie A'], positions: ['Forward'] },
+    { name: 'Per Mertesacker', country: 'Germany', teams: ['Arsenal'], awards: ['Premier League'], positions: ['Defender'] },
+    { name: 'Mesut Özil', country: 'Germany', teams: ['Real Madrid', 'Arsenal'], awards: ['La Liga', 'Premier League'], positions: ['Midfielder'] },
+    { name: 'Thomas Müller', country: 'Germany', teams: ['Bayern Munich'], awards: ['Bundesliga'], positions: ['Forward'] },
+    { name: 'Jens Lehmann', country: 'Germany', teams: ['Borussia Dortmund', 'Arsenal'], awards: ['Premier League'], positions: ['Goalkeeper'] },
+    { name: 'Carsten Jancker', country: 'Germany', teams: ['Bayern Munich'], awards: ['Bundesliga'], positions: ['Forward'] },
+    { name: 'Dietmar Hamann', country: 'Germany', teams: ['Liverpool', 'Manchester City'], awards: ['Premier League'], positions: ['Midfielder'] },
+    { name: 'Stefan Kießling', country: 'Germany', teams: ['Bayer Leverkusen'], awards: ['Bundesliga'], positions: ['Forward'] },
+    { name: 'Sami Khedira', country: 'Germany', teams: ['Real Madrid', 'Juventus'], awards: ['La Liga', 'Serie A'], positions: ['Midfielder'] },
+    { name: 'Mats Hummels', country: 'Germany', teams: ['Borussia Dortmund', 'Bayern Munich'], awards: ['Bundesliga'], positions: ['Defender'] },
+    { name: 'Mario Götze', country: 'Germany', teams: ['Borussia Dortmund', 'Bayern Munich'], awards: ['Bundesliga'], positions: ['Midfielder'] },
+    { name: 'André Schürrle', country: 'Germany', teams: ['Chelsea', 'Borussia Dortmund'], awards: ['Premier League', 'Bundesliga'], positions: ['Forward'] },
+    { name: 'Lukas Podolski', country: 'Germany', teams: ['Arsenal', 'Inter Milan'], awards: ['Premier League', 'Serie A'], positions: ['Forward'] },
+    { name: 'Kevin Großkreutz', country: 'Germany', teams: ['Borussia Dortmund'], awards: ['Bundesliga'], positions: ['Defender'] },
+    { name: 'Robert Lewandowski', country: 'Poland', teams: ['Borussia Dortmund', 'Bayern Munich', 'Barcelona'], awards: ['Bundesliga', 'La Liga'], positions: ['Forward'] },
+    // ── ITALY ──────────────────────────────────────────────────────────────────
+    { name: 'Francesco Totti', country: 'Italy', teams: ['Roma'], awards: ['Serie A'], positions: ['Forward'] },
+    { name: 'Alessandro Del Piero', country: 'Italy', teams: ['Juventus'], awards: ['Serie A'], positions: ['Forward'] },
+    { name: 'Gianluigi Buffon', country: 'Italy', teams: ['Juventus', 'PSG'], awards: ['Serie A', 'Ligue 1'], positions: ['Goalkeeper'] },
+    { name: 'Andrea Pirlo', country: 'Italy', teams: ['Milan', 'Juventus'], awards: ['Serie A'], positions: ['Midfielder'] },
+    { name: 'Fabio Cannavaro', country: 'Italy', teams: ['Juventus', 'Real Madrid'], awards: ['La Liga', 'Serie A'], positions: ['Defender'] },
+    { name: 'Paolo Maldini', country: 'Italy', teams: ['Milan'], awards: ['Serie A'], positions: ['Defender'] },
+    { name: 'Filippo Inzaghi', country: 'Italy', teams: ['Juventus', 'Milan'], awards: ['Serie A'], positions: ['Forward'] },
+    { name: 'Roberto Baggio', country: 'Italy', teams: ['Juventus', 'Milan', 'Inter Milan'], awards: ['Serie A'], positions: ['Forward'] },
+    { name: 'Alessandro Nesta', country: 'Italy', teams: ['Lazio', 'Milan'], awards: ['Serie A'], positions: ['Defender'] },
+    { name: 'Gennaro Gattuso', country: 'Italy', teams: ['Milan'], awards: ['Serie A'], positions: ['Midfielder'] },
+    { name: 'Clarence Seedorf', country: 'Netherlands', teams: ['Milan'], awards: ['Serie A'], positions: ['Midfielder'] },
+    { name: 'Daniele De Rossi', country: 'Italy', teams: ['Roma'], awards: ['Serie A'], positions: ['Midfielder'] },
+    { name: 'Antonio Cassano', country: 'Italy', teams: ['Roma', 'Real Madrid', 'Milan'], awards: ['La Liga', 'Serie A'], positions: ['Forward'] },
+    { name: 'Christian Vieri', country: 'Italy', teams: ['Inter Milan', 'Lazio'], awards: ['Serie A'], positions: ['Forward'] },
+    { name: 'Gianluca Zambrotta', country: 'Italy', teams: ['Juventus', 'Barcelona', 'Milan'], awards: ['La Liga', 'Serie A'], positions: ['Defender'] },
+    { name: 'Massimo Ambrosini', country: 'Italy', teams: ['Milan'], awards: ['Serie A'], positions: ['Midfielder'] },
+    { name: 'Mauro Camoranesi', country: 'Italy', teams: ['Juventus'], awards: ['Serie A'], positions: ['Midfielder'] },
+    { name: 'Giorgio Chiellini', country: 'Italy', teams: ['Juventus'], awards: ['Serie A'], positions: ['Defender'] },
+    { name: 'Leonardo Bonucci', country: 'Italy', teams: ['Juventus', 'Milan'], awards: ['Serie A'], positions: ['Defender'] },
+    { name: 'Claudio Marchisio', country: 'Italy', teams: ['Juventus'], awards: ['Serie A'], positions: ['Midfielder'] },
+    { name: 'Simone Perrotta', country: 'Italy', teams: ['Roma'], awards: ['Serie A'], positions: ['Midfielder'] },
+    { name: 'Antonio Conte', country: 'Italy', teams: ['Juventus'], awards: ['Serie A'], positions: ['Midfielder'] },
+    { name: 'Gianluca Vialli', country: 'Italy', teams: ['Juventus', 'Chelsea'], awards: ['Serie A', 'Premier League'], positions: ['Forward'] },
+    { name: 'Demetrio Albertini', country: 'Italy', teams: ['Milan', 'Atletico Madrid'], awards: ['Serie A', 'La Liga'], positions: ['Midfielder'] },
+    { name: 'Ciro Ferrara', country: 'Italy', teams: ['Napoli', 'Juventus'], awards: ['Serie A'], positions: ['Defender'] },
+    { name: 'Marco Materazzi', country: 'Italy', teams: ['Inter Milan'], awards: ['Serie A'], positions: ['Defender'] },
+    { name: 'Esteban Cambiasso', country: 'Argentina', teams: ['Real Madrid', 'Inter Milan'], awards: ['La Liga', 'Serie A'], positions: ['Midfielder'] },
+    { name: 'Walter Samuel', country: 'Argentina', teams: ['Roma', 'Real Madrid', 'Inter Milan'], awards: ['La Liga', 'Serie A'], positions: ['Defender'] },
+    { name: 'Javier Zanetti', country: 'Argentina', teams: ['Inter Milan'], awards: ['Serie A'], positions: ['Defender'] },
+    { name: 'Dejan Stanković', country: 'Serbia', teams: ['Lazio', 'Inter Milan'], awards: ['Serie A'], positions: ['Midfielder'] },
+    // ── ARGENTINA ──────────────────────────────────────────────────────────────
+    { name: 'Gabriel Batistuta', country: 'Argentina', teams: ['Fiorentina', 'Roma'], awards: ['Serie A'], positions: ['Forward'] },
+    { name: 'Hernán Crespo', country: 'Argentina', teams: ['Lazio', 'Inter Milan', 'Chelsea', 'Milan'], awards: ['Serie A', 'Premier League'], positions: ['Forward'] },
+    { name: 'Juan Sebastián Verón', country: 'Argentina', teams: ['Lazio', 'Manchester United', 'Chelsea', 'Inter Milan'], awards: ['Premier League', 'Serie A'], positions: ['Midfielder'] },
+    { name: 'Carlos Tévez', country: 'Argentina', teams: ['West Ham', 'Manchester United', 'Manchester City', 'Juventus'], awards: ['Premier League', 'Serie A'], positions: ['Forward'] },
+    { name: 'Diego Forlán', country: 'Uruguay', teams: ['Manchester United', 'Atletico Madrid', 'Inter Milan'], awards: ['Premier League', 'La Liga', 'Serie A'], positions: ['Forward'] },
+    { name: 'Sergio Agüero', country: 'Argentina', teams: ['Atletico Madrid', 'Manchester City'], awards: ['La Liga', 'Premier League'], positions: ['Forward'] },
+    { name: 'Pablo Aimar', country: 'Argentina', teams: ['Valencia', 'Real Zaragoza'], awards: ['La Liga'], positions: ['Midfielder'] },
+    { name: 'Claudio Caniggia', country: 'Argentina', teams: ['Fiorentina', 'Juventus'], awards: ['Serie A'], positions: ['Forward'] },
+    { name: 'Mauricio Pochettino', country: 'Argentina', teams: ['PSG', 'Tottenham'], awards: ['Premier League', 'Ligue 1'], positions: ['Defender'] },
+    { name: 'Pablo Zabaleta', country: 'Argentina', teams: ['Espanyol', 'Manchester City'], awards: ['Premier League', 'La Liga'], positions: ['Defender'] },
+    // ── ENGLAND ────────────────────────────────────────────────────────────────
+    { name: 'David Beckham', country: 'England', teams: ['Manchester United', 'Real Madrid', 'Milan', 'PSG'], awards: ['Premier League', 'La Liga', 'Serie A', 'Ligue 1'], positions: ['Midfielder'] },
+    { name: 'Steven Gerrard', country: 'England', teams: ['Liverpool'], awards: ['Premier League'], positions: ['Midfielder'] },
+    { name: 'Frank Lampard', country: 'England', teams: ['Chelsea'], awards: ['Premier League'], positions: ['Midfielder'] },
+    { name: 'John Terry', country: 'England', teams: ['Chelsea'], awards: ['Premier League'], positions: ['Defender'] },
+    { name: 'Wayne Rooney', country: 'England', teams: ['Everton', 'Manchester United'], awards: ['Premier League'], positions: ['Forward'] },
+    { name: 'Michael Owen', country: 'England', teams: ['Liverpool', 'Real Madrid', 'Newcastle'], awards: ['Premier League', 'La Liga'], positions: ['Forward'] },
+    { name: 'Rio Ferdinand', country: 'England', teams: ['Leeds', 'Manchester United'], awards: ['Premier League'], positions: ['Defender'] },
+    { name: 'Paul Scholes', country: 'England', teams: ['Manchester United'], awards: ['Premier League'], positions: ['Midfielder'] },
+    { name: 'Sol Campbell', country: 'England', teams: ['Tottenham', 'Arsenal'], awards: ['Premier League'], positions: ['Defender'] },
+    { name: 'Ashley Cole', country: 'England', teams: ['Arsenal', 'Chelsea'], awards: ['Premier League'], positions: ['Defender'] },
+    { name: 'Roy Keane', country: 'Republic of Ireland', teams: ['Manchester United'], awards: ['Premier League'], positions: ['Midfielder'] },
+    { name: 'Ryan Giggs', country: 'Wales', teams: ['Manchester United'], awards: ['Premier League'], positions: ['Midfielder'] },
+    { name: 'Peter Schmeichel', country: 'Denmark', teams: ['Manchester United', 'Manchester City'], awards: ['Premier League'], positions: ['Goalkeeper'] },
+    { name: 'Andy Cole', country: 'England', teams: ['Newcastle', 'Manchester United'], awards: ['Premier League'], positions: ['Forward'] },
+    { name: 'Dwight Yorke', country: 'Trinidad and Tobago', teams: ['Aston Villa', 'Manchester United'], awards: ['Premier League'], positions: ['Forward'] },
+    { name: 'Teddy Sheringham', country: 'England', teams: ['Tottenham', 'Manchester United'], awards: ['Premier League'], positions: ['Forward'] },
+    { name: 'Ole Gunnar Solskjaer', country: 'Norway', teams: ['Manchester United'], awards: ['Premier League'], positions: ['Forward'] },
+    { name: 'Ronny Johnsen', country: 'Norway', teams: ['Manchester United'], awards: ['Premier League'], positions: ['Defender'] },
+    { name: 'Gary Neville', country: 'England', teams: ['Manchester United'], awards: ['Premier League'], positions: ['Defender'] },
+    { name: 'Phil Neville', country: 'England', teams: ['Manchester United', 'Everton'], awards: ['Premier League'], positions: ['Defender'] },
+    { name: 'Nicky Butt', country: 'England', teams: ['Manchester United'], awards: ['Premier League'], positions: ['Midfielder'] },
+    { name: 'Mikael Silvestre', country: 'France', teams: ['Manchester United', 'Arsenal'], awards: ['Premier League'], positions: ['Defender'] },
+    { name: 'Patrice Evra', country: 'France', teams: ['Manchester United', 'Juventus'], awards: ['Premier League', 'Serie A'], positions: ['Defender'] },
+    { name: 'Nemanja Vidić', country: 'Serbia', teams: ['Manchester United'], awards: ['Premier League'], positions: ['Defender'] },
+    { name: 'Ji-Sung Park', country: 'South Korea', teams: ['Manchester United'], awards: ['Premier League'], positions: ['Midfielder'] },
+    { name: 'Michael Carrick', country: 'England', teams: ['West Ham', 'Tottenham', 'Manchester United'], awards: ['Premier League'], positions: ['Midfielder'] },
+    { name: 'Dimitar Berbatov', country: 'Bulgaria', teams: ['Bayer Leverkusen', 'Tottenham', 'Manchester United'], awards: ['Premier League', 'Bundesliga'], positions: ['Forward'] },
+    { name: 'Javier Hernández', country: 'Mexico', teams: ['Manchester United', 'Bayer Leverkusen', 'West Ham'], awards: ['Premier League', 'Bundesliga'], positions: ['Forward'] },
+    { name: 'Robbie Fowler', country: 'England', teams: ['Liverpool', 'Manchester City'], awards: ['Premier League'], positions: ['Forward'] },
+    { name: 'Emile Heskey', country: 'England', teams: ['Leicester', 'Liverpool', 'Birmingham', 'Aston Villa'], awards: ['Premier League'], positions: ['Forward'] },
+    { name: 'Jamie Carragher', country: 'England', teams: ['Liverpool'], awards: ['Premier League'], positions: ['Defender'] },
+    { name: 'Sami Hyypiä', country: 'Finland', teams: ['Liverpool'], awards: ['Premier League'], positions: ['Defender'] },
+    { name: 'John Arne Riise', country: 'Norway', teams: ['Liverpool'], awards: ['Premier League'], positions: ['Defender'] },
+    { name: 'Luis García', country: 'Spain', teams: ['Liverpool'], awards: ['Premier League'], positions: ['Midfielder'] },
+    { name: 'Peter Crouch', country: 'England', teams: ['Liverpool', 'Tottenham', 'Stoke'], awards: ['Premier League'], positions: ['Forward'] },
+    { name: 'Jermain Defoe', country: 'England', teams: ['Tottenham', 'West Ham', 'Sunderland'], awards: ['Premier League'], positions: ['Forward'] },
+    { name: 'Tim Cahill', country: 'Australia', teams: ['Everton'], awards: ['Premier League'], positions: ['Midfielder'] },
+    { name: 'Alan Shearer', country: 'England', teams: ['Blackburn', 'Newcastle'], awards: ['Premier League'], positions: ['Forward'] },
+    { name: 'Robbie Keane', country: 'Republic of Ireland', teams: ['Leeds', 'Liverpool', 'Tottenham'], awards: ['Premier League'], positions: ['Forward'] },
+    { name: 'Chris Sutton', country: 'England', teams: ['Blackburn', 'Chelsea', 'Celtic'], awards: ['Premier League'], positions: ['Forward'] },
+    { name: 'Andrew Cole', country: 'England', teams: ['Blackburn', 'Manchester United'], awards: ['Premier League'], positions: ['Forward'] },
+    { name: 'Kevin Gallacher', country: 'Scotland', teams: ['Blackburn'], awards: ['Premier League'], positions: ['Forward'] },
+    { name: 'Damien Duff', country: 'Republic of Ireland', teams: ['Blackburn', 'Chelsea'], awards: ['Premier League'], positions: ['Midfielder'] },
+    { name: 'Tugay', country: 'Turkey', teams: ['Blackburn'], awards: ['Premier League'], positions: ['Midfielder'] },
+    { name: 'Darren Anderton', country: 'England', teams: ['Tottenham'], awards: ['Premier League'], positions: ['Midfielder'] },
+    { name: 'Teddy Sheringham', country: 'England', teams: ['Tottenham', 'Manchester United'], awards: ['Premier League'], positions: ['Forward'] },
+    { name: 'Luka Modrić', country: 'Croatia', teams: ['Tottenham', 'Real Madrid'], awards: ['Premier League', 'La Liga'], positions: ['Midfielder'] },
+    { name: 'Gareth Bale', country: 'Wales', teams: ['Southampton', 'Tottenham', 'Real Madrid'], awards: ['Premier League', 'La Liga'], positions: ['Midfielder'] },
+    { name: 'Aaron Lennon', country: 'England', teams: ['Tottenham', 'Everton'], awards: ['Premier League'], positions: ['Midfielder'] },
+    { name: 'Ledley King', country: 'England', teams: ['Tottenham'], awards: ['Premier League'], positions: ['Defender'] },
+    { name: 'Michael Dawson', country: 'England', teams: ['Tottenham'], awards: ['Premier League'], positions: ['Defender'] },
+    { name: 'Peter Schmeichel', country: 'Denmark', teams: ['Manchester City'], awards: ['Premier League'], positions: ['Goalkeeper'] },
+    { name: 'Emmanuel Adebayor', country: 'Togo', teams: ['Arsenal', 'Manchester City', 'Tottenham'], awards: ['Premier League'], positions: ['Forward'] },
+    { name: 'Shaun Wright-Phillips', country: 'England', teams: ['Manchester City', 'Chelsea'], awards: ['Premier League'], positions: ['Midfielder'] },
+    { name: 'Robinho', country: 'Brazil', teams: ['Manchester City'], awards: ['Premier League'], positions: ['Forward'] },
+    { name: 'Mario Balotelli', country: 'Italy', teams: ['Manchester City', 'Liverpool', 'Milan'], awards: ['Premier League', 'Serie A'], positions: ['Forward'] },
+    { name: 'Aleksandar Kolarov', country: 'Serbia', teams: ['Manchester City', 'Roma'], awards: ['Premier League', 'Serie A'], positions: ['Defender'] },
+    { name: 'Vincent Kompany', country: 'Belgium', teams: ['Manchester City'], awards: ['Premier League'], positions: ['Defender'] },
+    { name: 'Martin Petrov', country: 'Bulgaria', teams: ['Manchester City'], awards: ['Premier League'], positions: ['Midfielder'] },
+    { name: 'Nicolas Bendtner', country: 'Denmark', teams: ['Arsenal'], awards: ['Premier League'], positions: ['Forward'] },
+    { name: 'Gael Clichy', country: 'France', teams: ['Arsenal', 'Manchester City'], awards: ['Premier League'], positions: ['Defender'] },
+    { name: 'Thomas Vermaelen', country: 'Belgium', teams: ['Arsenal', 'Barcelona'], awards: ['Premier League', 'La Liga'], positions: ['Defender'] },
+    { name: 'Tomas Rosický', country: 'Czech Republic', teams: ['Borussia Dortmund', 'Arsenal'], awards: ['Bundesliga', 'Premier League'], positions: ['Midfielder'] },
+    { name: 'Mikel Arteta', country: 'Spain', teams: ['Everton', 'Arsenal'], awards: ['Premier League'], positions: ['Midfielder'] },
+    { name: 'Alex Song', country: 'Cameroon', teams: ['Arsenal', 'Barcelona'], awards: ['Premier League', 'La Liga'], positions: ['Midfielder'] },
+    { name: 'Andrey Arshavin', country: 'Russia', teams: ['Arsenal'], awards: ['Premier League'], positions: ['Midfielder'] },
+    { name: 'Fredrik Ljungberg', country: 'Sweden', teams: ['Arsenal'], awards: ['Premier League'], positions: ['Midfielder'] },
+    { name: 'Lauren', country: 'Cameroon', teams: ['Arsenal'], awards: ['Premier League'], positions: ['Defender'] },
+    { name: 'Sylvain Wiltord', country: 'France', teams: ['Arsenal'], awards: ['Premier League'], positions: ['Forward'] },
+    { name: 'Edu', country: 'Brazil', teams: ['Arsenal', 'Valencia'], awards: ['Premier League', 'La Liga'], positions: ['Midfielder'] },
+    { name: 'José Antonio Reyes', country: 'Spain', teams: ['Arsenal', 'Real Madrid', 'Sevilla'], awards: ['Premier League', 'La Liga'], positions: ['Midfielder'] },
+    { name: 'Emmanuel Petit', country: 'France', teams: ['Arsenal', 'Barcelona', 'Chelsea'], awards: ['Premier League', 'La Liga'], positions: ['Midfielder'] },
+    { name: 'Mikael Forssell', country: 'Finland', teams: ['Chelsea', 'Birmingham'], awards: ['Premier League'], positions: ['Forward'] },
+    { name: 'Eiður Guðjohnsen', country: 'Iceland', teams: ['Chelsea', 'Barcelona'], awards: ['Premier League', 'La Liga'], positions: ['Forward'] },
+    { name: 'Scott Parker', country: 'England', teams: ['Chelsea', 'Tottenham', 'West Ham'], awards: ['Premier League'], positions: ['Midfielder'] },
+    { name: 'Joe Cole', country: 'England', teams: ['Chelsea', 'West Ham', 'Liverpool'], awards: ['Premier League'], positions: ['Midfielder'] },
+    { name: 'Michael Essien', country: 'Ghana', teams: ['Lyon', 'Chelsea', 'Real Madrid'], awards: ['Premier League', 'La Liga', 'Ligue 1'], positions: ['Midfielder'] },
+    { name: 'Paulo Ferreira', country: 'Portugal', teams: ['Porto', 'Chelsea'], awards: ['Premier League', 'Primeira Liga'], positions: ['Defender'] },
+    { name: 'Ricardo Carvalho', country: 'Portugal', teams: ['Porto', 'Chelsea', 'Real Madrid'], awards: ['Premier League', 'La Liga', 'Primeira Liga'], positions: ['Defender'] },
+    { name: 'Tal Ben Haim', country: 'Israel', teams: ['Bolton', 'Chelsea'], awards: ['Premier League'], positions: ['Defender'] },
+    { name: 'Yuri Zhirkov', country: 'Russia', teams: ['Chelsea'], awards: ['Premier League'], positions: ['Midfielder'] },
+    { name: 'Duncan Ferguson', country: 'Scotland', teams: ['Everton', 'Newcastle'], awards: ['Premier League'], positions: ['Forward'] },
+    { name: 'Thomas Gravesen', country: 'Denmark', teams: ['Everton', 'Real Madrid'], awards: ['Premier League', 'La Liga'], positions: ['Midfielder'] },
+    { name: 'Mikel Arteta', country: 'Spain', teams: ['Everton', 'Arsenal'], awards: ['Premier League'], positions: ['Midfielder'] },
+    { name: 'Sylvain Distin', country: 'France', teams: ['Newcastle', 'Manchester City', 'Everton'], awards: ['Premier League'], positions: ['Defender'] },
+    { name: 'Tony Hibbert', country: 'England', teams: ['Everton'], awards: ['Premier League'], positions: ['Defender'] },
+    { name: 'Andy Johnson', country: 'England', teams: ['Crystal Palace', 'Everton'], awards: ['Premier League'], positions: ['Forward'] },
+    { name: 'Marouane Fellaini', country: 'Belgium', teams: ['Everton', 'Manchester United'], awards: ['Premier League'], positions: ['Midfielder'] },
+    { name: 'Gareth Barry', country: 'England', teams: ['Aston Villa', 'Manchester City', 'Everton'], awards: ['Premier League'], positions: ['Midfielder'] },
+    { name: 'Tim Howard', country: 'United States', teams: ['Manchester United', 'Everton'], awards: ['Premier League'], positions: ['Goalkeeper'] },
+    { name: 'Leighton Baines', country: 'England', teams: ['Everton'], awards: ['Premier League'], positions: ['Defender'] },
+    { name: 'Phil Jagielka', country: 'England', teams: ['Everton'], awards: ['Premier League'], positions: ['Defender'] },
+    { name: 'Nwankwo Kanu', country: 'Nigeria', teams: ['Ajax', 'Arsenal', 'West Brom', 'Portsmouth'], awards: ['Premier League'], positions: ['Forward'] },
+    { name: 'Niall Quinn', country: 'Republic of Ireland', teams: ['Manchester City', 'Sunderland'], awards: ['Premier League'], positions: ['Forward'] },
+    { name: 'David James', country: 'England', teams: ['Liverpool', 'Aston Villa', 'Manchester City', 'Portsmouth'], awards: ['Premier League'], positions: ['Goalkeeper'] },
+    { name: 'Sébastien Squillaci', country: 'France', teams: ['Lyon', 'Sevilla', 'Arsenal'], awards: ['Premier League', 'La Liga', 'Ligue 1'], positions: ['Defender'] },
+    { name: 'Harry Kewell', country: 'Australia', teams: ['Leeds', 'Liverpool', 'Galatasaray'], awards: ['Premier League'], positions: ['Midfielder'] },
+    { name: 'Mark Viduka', country: 'Australia', teams: ['Leeds', 'Middlesbrough', 'Newcastle'], awards: ['Premier League'], positions: ['Forward'] },
+    { name: 'Lee Bowyer', country: 'England', teams: ['Leeds', 'West Ham', 'Newcastle'], awards: ['Premier League'], positions: ['Midfielder'] },
+    { name: 'Rio Ferdinand', country: 'England', teams: ['Leeds', 'Manchester United'], awards: ['Premier League'], positions: ['Defender'] },
+    { name: 'Alan Smith', country: 'England', teams: ['Leeds', 'Manchester United'], awards: ['Premier League'], positions: ['Forward'] },
+    { name: 'Jonathan Woodgate', country: 'England', teams: ['Leeds', 'Newcastle', 'Real Madrid'], awards: ['Premier League', 'La Liga'], positions: ['Defender'] },
+    // ── IVORY COAST / AFRICA ───────────────────────────────────────────────────
+    { name: 'Didier Drogba', country: 'Ivory Coast', teams: ['Chelsea', 'Galatasaray'], awards: ['Premier League'], positions: ['Forward'] },
+    { name: 'Yaya Touré', country: 'Ivory Coast', teams: ['Barcelona', 'Manchester City'], awards: ['La Liga', 'Premier League'], positions: ['Midfielder'] },
+    { name: 'Kolo Touré', country: 'Ivory Coast', teams: ['Arsenal', 'Manchester City', 'Liverpool'], awards: ['Premier League'], positions: ['Defender'] },
+    { name: 'Samuel Eto\'o', country: 'Cameroon', teams: ['Barcelona', 'Inter Milan', 'Chelsea'], awards: ['La Liga', 'Serie A', 'Premier League'], positions: ['Forward'] },
+    { name: 'El Hadji Diouf', country: 'Senegal', teams: ['Liverpool'], awards: ['Premier League'], positions: ['Forward'] },
+    { name: 'Michael Essien', country: 'Ghana', teams: ['Chelsea', 'Lyon'], awards: ['Premier League', 'Ligue 1'], positions: ['Midfielder'] },
+    { name: 'Sulley Muntari', country: 'Ghana', teams: ['Portsmouth', 'Inter Milan', 'Milan'], awards: ['Premier League', 'Serie A'], positions: ['Midfielder'] },
+    { name: 'Didier Zokora', country: 'Ivory Coast', teams: ['Tottenham', 'Sevilla'], awards: ['Premier League', 'La Liga'], positions: ['Midfielder'] },
+    { name: 'Emmanuel Eboué', country: 'Ivory Coast', teams: ['Arsenal', 'Galatasaray'], awards: ['Premier League'], positions: ['Defender'] },
+    { name: 'Nwankwo Kanu', country: 'Nigeria', teams: ['Ajax', 'Arsenal', 'West Brom', 'Portsmouth'], awards: ['Premier League'], positions: ['Forward'] },
+    { name: 'Jay-Jay Okocha', country: 'Nigeria', teams: ['Bolton'], awards: ['Premier League'], positions: ['Midfielder'] },
+    { name: 'Celestine Babayaro', country: 'Nigeria', teams: ['Chelsea', 'Newcastle'], awards: ['Premier League'], positions: ['Defender'] },
+    { name: 'Finidi George', country: 'Nigeria', teams: ['Ajax', 'Real Betis'], awards: ['La Liga'], positions: ['Midfielder'] },
+    { name: 'Abedi Pelé', country: 'Ghana', teams: ['Marseille', 'Lyon'], awards: ['Ligue 1'], positions: ['Midfielder'] },
+    { name: 'Moussa Sissoko', country: 'France', teams: ['Toulouse', 'Newcastle', 'Tottenham'], awards: ['Premier League'], positions: ['Midfielder'] },
+    { name: 'Bakary Sagna', country: 'France', teams: ['Arsenal', 'Manchester City'], awards: ['Premier League'], positions: ['Defender'] },
+    // ── SWEDEN ─────────────────────────────────────────────────────────────────
+    { name: 'Zlatan Ibrahimović', country: 'Sweden', teams: ['Ajax', 'Juventus', 'Inter Milan', 'Barcelona', 'Milan', 'PSG', 'Manchester United'], awards: ['La Liga', 'Serie A', 'Ligue 1', 'Premier League'], positions: ['Forward'] },
+    { name: 'Fredrik Ljungberg', country: 'Sweden', teams: ['Arsenal'], awards: ['Premier League'], positions: ['Midfielder'] },
+    { name: 'Henrik Larsson', country: 'Sweden', teams: ['Celtic', 'Barcelona'], awards: ['La Liga'], positions: ['Forward'] },
+    { name: 'Martin Dahlin', country: 'Sweden', teams: ['Borussia Mönchengladbach'], awards: ['Bundesliga'], positions: ['Forward'] },
+    { name: 'Olof Mellberg', country: 'Sweden', teams: ['Aston Villa', 'Juventus'], awards: ['Premier League', 'Serie A'], positions: ['Defender'] },
+    { name: 'Tobias Linderoth', country: 'Sweden', teams: ['Everton', 'Galatasaray'], awards: ['Premier League'], positions: ['Midfielder'] },
+    // ── CROATIA ────────────────────────────────────────────────────────────────
+    { name: 'Ivan Rakitić', country: 'Croatia', teams: ['Sevilla', 'Barcelona'], awards: ['La Liga'], positions: ['Midfielder'] },
+    { name: 'Luka Modrić', country: 'Croatia', teams: ['Tottenham', 'Real Madrid'], awards: ['Premier League', 'La Liga'], positions: ['Midfielder'] },
+    { name: 'Davor Šuker', country: 'Croatia', teams: ['Real Madrid', 'Arsenal'], awards: ['La Liga', 'Premier League'], positions: ['Forward'] },
+    { name: 'Robert Prosinečki', country: 'Croatia', teams: ['Real Madrid', 'Barcelona'], awards: ['La Liga'], positions: ['Midfielder'] },
+    { name: 'Slaven Bilić', country: 'Croatia', teams: ['Everton', 'West Ham'], awards: ['Premier League'], positions: ['Defender'] },
+    { name: 'Stipe Pletikosa', country: 'Croatia', teams: ['Tottenham'], awards: ['Premier League'], positions: ['Goalkeeper'] },
+    // ── CZECH REPUBLIC / SLOVAKIA ──────────────────────────────────────────────
+    { name: 'Pavel Nedvěd', country: 'Czech Republic', teams: ['Lazio', 'Juventus'], awards: ['Serie A'], positions: ['Midfielder'] },
+    { name: 'Tomáš Rosický', country: 'Czech Republic', teams: ['Borussia Dortmund', 'Arsenal'], awards: ['Bundesliga', 'Premier League'], positions: ['Midfielder'] },
+    { name: 'Milan Baroš', country: 'Czech Republic', teams: ['Liverpool', 'Lyon'], awards: ['Premier League', 'Ligue 1'], positions: ['Forward'] },
+    { name: 'Jan Koller', country: 'Czech Republic', teams: ['Borussia Dortmund'], awards: ['Bundesliga'], positions: ['Forward'] },
+    { name: 'Vladimír Šmicer', country: 'Czech Republic', teams: ['Liverpool'], awards: ['Premier League'], positions: ['Midfielder'] },
+    { name: 'Marek Hamšík', country: 'Slovakia', teams: ['Napoli'], awards: ['Serie A'], positions: ['Midfielder'] },
+    // ── COLOMBIA / SOUTH AMERICA ───────────────────────────────────────────────
+    { name: 'Falcao', country: 'Colombia', teams: ['Porto', 'Atletico Madrid', 'Monaco', 'Manchester United', 'Chelsea'], awards: ['La Liga', 'Premier League', 'Ligue 1'], positions: ['Forward'] },
+    { name: 'James Rodríguez', country: 'Colombia', teams: ['Monaco', 'Real Madrid', 'Bayern Munich', 'Everton'], awards: ['La Liga', 'Bundesliga', 'Ligue 1', 'Premier League'], positions: ['Midfielder'] },
+    { name: 'Tino Asprilla', country: 'Colombia', teams: ['Parma', 'Newcastle'], awards: ['Serie A', 'Premier League'], positions: ['Forward'] },
+    { name: 'Juan Cuadrado', country: 'Colombia', teams: ['Fiorentina', 'Chelsea', 'Juventus'], awards: ['Premier League', 'Serie A'], positions: ['Midfielder'] },
+    { name: 'Víctor Ibarbo', country: 'Colombia', teams: ['Cagliari', 'Roma', 'Watford'], awards: ['Serie A', 'Premier League'], positions: ['Forward'] },
+    { name: 'Freddy Rincón', country: 'Colombia', teams: ['Real Madrid', 'Corinthians'], awards: ['La Liga'], positions: ['Midfielder'] },
+    { name: 'Marcelo', country: 'Brazil', teams: ['Real Madrid'], awards: ['La Liga'], positions: ['Defender'] },
+    { name: 'Oscar', country: 'Brazil', teams: ['Chelsea'], awards: ['Premier League'], positions: ['Midfielder'] },
+    { name: 'Felipe Luis', country: 'Brazil', teams: ['Atletico Madrid', 'Chelsea'], awards: ['La Liga', 'Premier League'], positions: ['Defender'] },
+    { name: 'Roque Santa Cruz', country: 'Paraguay', teams: ['Bayern Munich', 'Blackburn', 'Manchester City'], awards: ['Bundesliga', 'Premier League'], positions: ['Forward'] },
+    { name: 'Salvador Cabañas', country: 'Paraguay', teams: ['Club América'], awards: ['Liga MX'], positions: ['Forward'] },
+    // ── BELGIUM ────────────────────────────────────────────────────────────────
+    { name: 'Eden Hazard', country: 'Belgium', teams: ['Chelsea', 'Real Madrid'], awards: ['Premier League', 'La Liga'], positions: ['Midfielder'] },
+    { name: 'Vincent Kompany', country: 'Belgium', teams: ['Manchester City'], awards: ['Premier League'], positions: ['Defender'] },
+    { name: 'Thomas Vermaelen', country: 'Belgium', teams: ['Arsenal', 'Barcelona'], awards: ['Premier League', 'La Liga'], positions: ['Defender'] },
+    { name: 'Marouane Fellaini', country: 'Belgium', teams: ['Everton', 'Manchester United'], awards: ['Premier League'], positions: ['Midfielder'] },
+    { name: 'Jan Vertonghen', country: 'Belgium', teams: ['Ajax', 'Tottenham', 'Benfica'], awards: ['Premier League'], positions: ['Defender'] },
+    { name: 'Toby Alderweireld', country: 'Belgium', teams: ['Ajax', 'Atletico Madrid', 'Tottenham'], awards: ['Premier League', 'La Liga'], positions: ['Defender'] },
+    { name: 'Dries Mertens', country: 'Belgium', teams: ['Napoli'], awards: ['Serie A'], positions: ['Forward'] },
+    { name: 'Romelu Lukaku', country: 'Belgium', teams: ['Everton', 'Manchester United', 'Inter Milan', 'Chelsea'], awards: ['Premier League', 'Serie A'], positions: ['Forward'] },
+    // ── TURKEY / EAST EUROPE ───────────────────────────────────────────────────
+    { name: 'Hakan Şükür', country: 'Turkey', teams: ['Galatasaray', 'Inter Milan'], awards: ['Serie A'], positions: ['Forward'] },
+    { name: 'Rustu Reçber', country: 'Turkey', teams: ['Galatasaray', 'Barcelona'], awards: ['La Liga'], positions: ['Goalkeeper'] },
+    { name: 'Gheorghe Hagi', country: 'Romania', teams: ['Real Madrid', 'Barcelona', 'Galatasaray'], awards: ['La Liga'], positions: ['Midfielder'] },
+    { name: 'Gheorghe Popescu', country: 'Romania', teams: ['Tottenham', 'Barcelona'], awards: ['Premier League', 'La Liga'], positions: ['Midfielder'] },
+    { name: 'Sinisa Mihajlovic', country: 'Serbia', teams: ['Lazio', 'Inter Milan', 'Milan'], awards: ['Serie A'], positions: ['Defender'] },
+    { name: 'Dejan Savičević', country: 'Montenegro', teams: ['Red Star Belgrade', 'Milan'], awards: ['Serie A'], positions: ['Midfielder'] },
+    { name: 'Predrag Mijatović', country: 'Montenegro', teams: ['Valencia', 'Real Madrid'], awards: ['La Liga'], positions: ['Forward'] },
+    { name: 'Boban', country: 'Croatia', teams: ['Milan', 'Real Madrid'], awards: ['La Liga', 'Serie A'], positions: ['Midfielder'] },
+    { name: 'Andriy Shevchenko', country: 'Ukraine', teams: ['Milan', 'Chelsea'], awards: ['Serie A', 'Premier League'], positions: ['Forward'] },
+    { name: 'Oleksandr Shovkovskyi', country: 'Ukraine', teams: ['Dynamo Kyiv'], awards: [], positions: ['Goalkeeper'] },
+    // ── RUSSIA / EASTERN EUROPE ────────────────────────────────────────────────
+    { name: 'Andrey Arshavin', country: 'Russia', teams: ['Arsenal'], awards: ['Premier League'], positions: ['Midfielder'] },
+    { name: 'Dmitri Alenichev', country: 'Russia', teams: ['Roma', 'Porto'], awards: ['Serie A', 'Primeira Liga'], positions: ['Midfielder'] },
+    { name: 'Alexei Smertin', country: 'Russia', teams: ['Chelsea'], awards: ['Premier League'], positions: ['Midfielder'] },
+    { name: 'Yuri Zhirkov', country: 'Russia', teams: ['Chelsea'], awards: ['Premier League'], positions: ['Midfielder'] },
+    { name: 'Igor Shalimov', country: 'Russia', teams: ['Inter Milan', 'Napoli'], awards: ['Serie A'], positions: ['Midfielder'] },
+    // ── DENMARK / SCANDINAVIA ──────────────────────────────────────────────────
+    { name: 'Peter Schmeichel', country: 'Denmark', teams: ['Manchester United', 'Manchester City'], awards: ['Premier League'], positions: ['Goalkeeper'] },
+    { name: 'Thomas Helveg', country: 'Denmark', teams: ['Milan', 'Inter Milan'], awards: ['Serie A'], positions: ['Defender'] },
+    { name: 'Jon Dahl Tomasson', country: 'Denmark', teams: ['Newcastle', 'Milan'], awards: ['Premier League', 'Serie A'], positions: ['Forward'] },
+    { name: 'Martin Jørgensen', country: 'Denmark', teams: ['Udinese'], awards: ['Serie A'], positions: ['Midfielder'] },
+    { name: 'Jesper Grønkjær', country: 'Denmark', teams: ['Chelsea', 'Birmingham'], awards: ['Premier League'], positions: ['Midfielder'] },
+    { name: 'John Carew', country: 'Norway', teams: ['Valencia', 'Lyon', 'Aston Villa'], awards: ['La Liga', 'Ligue 1', 'Premier League'], positions: ['Forward'] },
+    { name: 'Tore André Flo', country: 'Norway', teams: ['Chelsea', 'Rangers'], awards: ['Premier League'], positions: ['Forward'] },
+    { name: 'Steffen Iversen', country: 'Norway', teams: ['Tottenham'], awards: ['Premier League'], positions: ['Forward'] },
+    // ── MEXICO / NORTH AMERICA ─────────────────────────────────────────────────
+    { name: 'Javier Hernández', country: 'Mexico', teams: ['Manchester United', 'Bayer Leverkusen', 'West Ham'], awards: ['Premier League', 'Bundesliga'], positions: ['Forward'] },
+    { name: 'Pavel Pardo', country: 'Mexico', teams: ['VfB Stuttgart'], awards: ['Bundesliga'], positions: ['Midfielder'] },
+    { name: 'Claudio Reyna', country: 'United States', teams: ['Manchester City', 'Sunderland'], awards: ['Premier League'], positions: ['Midfielder'] },
+    { name: 'Tim Howard', country: 'United States', teams: ['Manchester United', 'Everton'], awards: ['Premier League'], positions: ['Goalkeeper'] },
+    { name: 'Brad Friedel', country: 'United States', teams: ['Liverpool', 'Blackburn', 'Aston Villa', 'Tottenham'], awards: ['Premier League'], positions: ['Goalkeeper'] },
+    { name: 'Landon Donovan', country: 'United States', teams: ['Everton'], awards: ['Premier League'], positions: ['Midfielder'] },
+    // ── JAPAN / KOREA ──────────────────────────────────────────────────────────
+    { name: 'Ji-Sung Park', country: 'South Korea', teams: ['Manchester United', 'PSV'], awards: ['Premier League'], positions: ['Midfielder'] },
+    { name: 'Hidetoshi Nakata', country: 'Japan', teams: ['Perugia', 'Roma', 'Parma', 'Bolton'], awards: ['Serie A', 'Premier League'], positions: ['Midfielder'] },
+    { name: 'Shunsuke Nakamura', country: 'Japan', teams: ['Celtic', 'Espanyol'], awards: ['La Liga'], positions: ['Midfielder'] },
+    { name: 'Junichi Inamoto', country: 'Japan', teams: ['Arsenal', 'West Brom'], awards: ['Premier League'], positions: ['Midfielder'] },
+    // ── REAL MADRID / BARCELONA ADDITIONAL ─────────────────────────────────────
+    { name: 'Fernando Morientes', country: 'Spain', teams: ['Real Madrid', 'Monaco', 'Liverpool'], awards: ['La Liga', 'Premier League', 'Ligue 1'], positions: ['Forward'] },
+    { name: 'Guti', country: 'Spain', teams: ['Real Madrid'], awards: ['La Liga'], positions: ['Midfielder'] },
+    { name: 'Iván Campo', country: 'Spain', teams: ['Real Madrid', 'Bolton'], awards: ['La Liga', 'Premier League'], positions: ['Defender'] },
+    { name: 'Iván Helguera', country: 'Spain', teams: ['Real Madrid'], awards: ['La Liga'], positions: ['Midfielder'] },
+    { name: 'Francisco Pavón', country: 'Spain', teams: ['Real Madrid', 'Juventus'], awards: ['La Liga', 'Serie A'], positions: ['Defender'] },
+    { name: 'Rubén de la Red', country: 'Spain', teams: ['Real Madrid'], awards: ['La Liga'], positions: ['Midfielder'] },
+    { name: 'Luis Enrique', country: 'Spain', teams: ['Real Madrid', 'Barcelona'], awards: ['La Liga'], positions: ['Midfielder'] },
+    { name: 'Pep Guardiola', country: 'Spain', teams: ['Barcelona'], awards: ['La Liga'], positions: ['Midfielder'] },
+    { name: 'Hristo Stoichkov', country: 'Bulgaria', teams: ['Barcelona', 'Parma'], awards: ['La Liga', 'Serie A'], positions: ['Forward'] },
+    { name: 'Romário', country: 'Brazil', teams: ['Barcelona'], awards: ['La Liga'], positions: ['Forward'] },
+    { name: 'Michael Laudrup', country: 'Denmark', teams: ['Juventus', 'Barcelona', 'Real Madrid'], awards: ['La Liga', 'Serie A'], positions: ['Midfielder'] },
+    { name: 'Ronald Koeman', country: 'Netherlands', teams: ['Barcelona', 'Feyenoord'], awards: ['La Liga'], positions: ['Defender'] },
+    { name: 'Gheorge Popescu', country: 'Romania', teams: ['Barcelona'], awards: ['La Liga'], positions: ['Defender'] },
+    { name: 'Luis Figo', country: 'Portugal', teams: ['Barcelona', 'Real Madrid', 'Inter Milan'], awards: ['La Liga', 'Serie A'], positions: ['Midfielder'] },
+    // ── LIGUE 1 / FRENCH LEAGUE ────────────────────────────────────────────────
+    { name: 'David Trezeguet', country: 'France', teams: ['Monaco', 'Juventus'], awards: ['Ligue 1', 'Serie A'], positions: ['Forward'] },
+    { name: 'Pauleta', country: 'Portugal', teams: ['PSG', 'Deportivo'], awards: ['Ligue 1', 'La Liga'], positions: ['Forward'] },
+    { name: 'Pedro Miguel Pauleta', country: 'Portugal', teams: ['PSG'], awards: ['Ligue 1'], positions: ['Forward'] },
+    { name: 'Jérémy Toulalan', country: 'France', teams: ['Lyon', 'Manchester City', 'Monaco'], awards: ['Ligue 1', 'Premier League'], positions: ['Midfielder'] },
+    { name: 'Kim Källström', country: 'Sweden', teams: ['Lyon', 'Arsenal'], awards: ['Ligue 1', 'Premier League'], positions: ['Midfielder'] },
+    { name: 'Rémi Garde', country: 'France', teams: ['Lyon', 'Arsenal'], awards: ['Ligue 1', 'Premier League'], positions: ['Midfielder'] },
+    { name: 'Sébastien Frey', country: 'France', teams: ['Inter Milan', 'Fiorentina'], awards: ['Serie A'], positions: ['Goalkeeper'] },
+    { name: 'Shabani Nonda', country: 'DR Congo', teams: ['Monaco', 'Roma'], awards: ['Ligue 1', 'Serie A'], positions: ['Forward'] },
+    // ── DEPORTIVO LA CORUÑA ────────────────────────────────────────────────────
+    { name: 'Mauro Silva', country: 'Brazil', teams: ['Deportivo'], awards: ['La Liga'], positions: ['Midfielder'] },
+    { name: 'Juan Carlos Valerón', country: 'Spain', teams: ['Deportivo'], awards: ['La Liga'], positions: ['Midfielder'] },
+    { name: 'Lionel Scaloni', country: 'Argentina', teams: ['Deportivo', 'West Ham'], awards: ['La Liga', 'Premier League'], positions: ['Defender'] },
+    { name: 'Noureddine Naybet', country: 'Morocco', teams: ['Deportivo', 'Tottenham'], awards: ['La Liga', 'Premier League'], positions: ['Defender'] },
+    { name: 'Victor', country: 'Spain', teams: ['Deportivo'], awards: ['La Liga'], positions: ['Goalkeeper'] },
+    { name: 'Fran', country: 'Spain', teams: ['Deportivo'], awards: ['La Liga'], positions: ['Midfielder'] },
+    // ── SEVILLA / VALENCIA ─────────────────────────────────────────────────────
+    { name: 'Frederic Kanouté', country: 'Mali', teams: ['West Ham', 'Tottenham', 'Sevilla'], awards: ['Premier League', 'La Liga'], positions: ['Forward'] },
+    { name: 'Luis Fabiano', country: 'Brazil', teams: ['Sevilla'], awards: ['La Liga'], positions: ['Forward'] },
+    { name: 'David Pizarro', country: 'Chile', teams: ['Inter Milan', 'Roma', 'Napoli'], awards: ['Serie A'], positions: ['Midfielder'] },
+    { name: 'Ruben Baraja', country: 'Spain', teams: ['Valencia'], awards: ['La Liga'], positions: ['Midfielder'] },
+    { name: 'John Carew', country: 'Norway', teams: ['Valencia', 'Lyon', 'Aston Villa'], awards: ['La Liga', 'Ligue 1', 'Premier League'], positions: ['Forward'] },
+    { name: 'Kily González', country: 'Argentina', teams: ['Valencia', 'Inter Milan'], awards: ['La Liga', 'Serie A'], positions: ['Midfielder'] },
+    { name: 'Roberto Ayala', country: 'Argentina', teams: ['Valencia', 'Inter Milan'], awards: ['La Liga', 'Serie A'], positions: ['Defender'] },
+    { name: 'Santiago Cañizares', country: 'Spain', teams: ['Valencia', 'Real Madrid'], awards: ['La Liga'], positions: ['Goalkeeper'] },
+    // ── ATLETICO MADRID ────────────────────────────────────────────────────────
+    { name: 'Diego Simeone', country: 'Argentina', teams: ['Atletico Madrid'], awards: ['La Liga'], positions: ['Midfielder'] },
+    { name: 'Kiko', country: 'Spain', teams: ['Atletico Madrid'], awards: ['La Liga'], positions: ['Forward'] },
+    { name: 'Goran Pandev', country: 'North Macedonia', teams: ['Lazio', 'Inter Milan', 'Napoli'], awards: ['Serie A'], positions: ['Forward'] },
+    // ── ADDITIONAL BUNDESLIGA ──────────────────────────────────────────────────
+    { name: 'Giovane Élber', country: 'Brazil', teams: ['VfB Stuttgart', 'Bayern Munich'], awards: ['Bundesliga'], positions: ['Forward'] },
+    { name: 'Claudio Pizarro', country: 'Peru', teams: ['Bayern Munich', 'Chelsea', 'Werder Bremen'], awards: ['Bundesliga', 'Premier League'], positions: ['Forward'] },
+    { name: 'Roy Makaay', country: 'Netherlands', teams: ['Deportivo', 'Bayern Munich'], awards: ['La Liga', 'Bundesliga'], positions: ['Forward'] },
+    { name: 'Oliver Neuville', country: 'Germany', teams: ['Bayer Leverkusen', 'Borussia Mönchengladbach'], awards: ['Bundesliga'], positions: ['Forward'] },
+    { name: 'Fredi Bobic', country: 'Germany', teams: ['VfB Stuttgart', 'Borussia Dortmund'], awards: ['Bundesliga'], positions: ['Forward'] },
+    { name: 'Andreas Möller', country: 'Germany', teams: ['Juventus', 'Borussia Dortmund'], awards: ['Bundesliga', 'Serie A'], positions: ['Midfielder'] },
+    { name: 'Karl-Heinz Riedle', country: 'Germany', teams: ['Borussia Dortmund', 'Liverpool'], awards: ['Bundesliga', 'Premier League'], positions: ['Forward'] },
+    { name: 'Paulo Sousa', country: 'Portugal', teams: ['Borussia Dortmund', 'Juventus'], awards: ['Bundesliga', 'Serie A'], positions: ['Midfielder'] },
+    { name: 'Robert Kovač', country: 'Croatia', teams: ['Bayern Munich', 'Borussia Dortmund'], awards: ['Bundesliga'], positions: ['Defender'] },
+    { name: 'Owen Hargreaves', country: 'England', teams: ['Bayern Munich', 'Manchester United'], awards: ['Bundesliga', 'Premier League'], positions: ['Midfielder'] },
+    { name: 'Willy Sagnol', country: 'France', teams: ['Bayern Munich'], awards: ['Bundesliga'], positions: ['Defender'] },
+    { name: 'Bixente Lizarazu', country: 'France', teams: ['Bayern Munich'], awards: ['Bundesliga'], positions: ['Defender'] },
+    { name: 'Hasan Salihamidžić', country: 'Bosnia and Herzegovina', teams: ['Bayern Munich'], awards: ['Bundesliga'], positions: ['Midfielder'] },
+    { name: 'Zé Roberto', country: 'Brazil', teams: ['Bayern Munich'], awards: ['Bundesliga'], positions: ['Defender'] },
+    { name: 'Lúcio', country: 'Brazil', teams: ['Bayern Munich', 'Inter Milan'], awards: ['Bundesliga', 'Serie A'], positions: ['Defender'] },
+    { name: 'Mehmet Scholl', country: 'Germany', teams: ['Bayern Munich'], awards: ['Bundesliga'], positions: ['Midfielder'] },
+    { name: 'Thomas Linke', country: 'Germany', teams: ['Bayern Munich', 'Schalke'], awards: ['Bundesliga'], positions: ['Defender'] },
+    { name: 'Marcell Jansen', country: 'Germany', teams: ['Borussia Mönchengladbach', 'Hamburg'], awards: ['Bundesliga'], positions: ['Defender'] },
+    { name: 'Ivan Rakitić', country: 'Croatia', teams: ['Schalke', 'Sevilla', 'Barcelona'], awards: ['La Liga', 'Bundesliga'], positions: ['Midfielder'] },
+    { name: 'Gerald Asamoah', country: 'Ghana', teams: ['Schalke'], awards: ['Bundesliga'], positions: ['Forward'] },
+    { name: 'Christian Pander', country: 'Germany', teams: ['Schalke'], awards: ['Bundesliga'], positions: ['Defender'] },
+    { name: 'Mladen Krstajić', country: 'Serbia', teams: ['Schalke'], awards: ['Bundesliga'], positions: ['Defender'] },
+    { name: 'Nico Kovač', country: 'Croatia', teams: ['Bayer Leverkusen', 'Hamburg'], awards: ['Bundesliga'], positions: ['Midfielder'] },
+    { name: 'Bernd Schneider', country: 'Germany', teams: ['Bayer Leverkusen'], awards: ['Bundesliga'], positions: ['Midfielder'] },
+    { name: 'Ze Roberto', country: 'Brazil', teams: ['Bayer Leverkusen', 'Bayern Munich'], awards: ['Bundesliga'], positions: ['Defender'] },
+    { name: 'Lúcio', country: 'Brazil', teams: ['Bayer Leverkusen', 'Bayern Munich', 'Inter Milan'], awards: ['Bundesliga', 'Serie A'], positions: ['Defender'] },
+    // ── ADDITIONAL SERIE A ──────────────────────────────────────────────────────
+    { name: 'Dino Baggio', country: 'Italy', teams: ['Juventus', 'Parma'], awards: ['Serie A'], positions: ['Midfielder'] },
+    { name: 'Gianfranco Zola', country: 'Italy', teams: ['Napoli', 'Parma', 'Chelsea'], awards: ['Serie A', 'Premier League'], positions: ['Forward'] },
+    { name: 'Alain Boghossian', country: 'France', teams: ['Inter Milan', 'Juventus'], awards: ['Serie A'], positions: ['Midfielder'] },
+    { name: 'Hernán Crespo', country: 'Argentina', teams: ['Lazio', 'Inter Milan', 'Chelsea', 'Milan'], awards: ['Serie A', 'Premier League'], positions: ['Forward'] },
+    { name: 'Igor Protti', country: 'Italy', teams: ['Bari', 'Lazio'], awards: ['Serie A'], positions: ['Forward'] },
+    { name: 'Marco Di Vaio', country: 'Italy', teams: ['Lazio', 'Valencia', 'Juventus'], awards: ['La Liga', 'Serie A'], positions: ['Forward'] },
+    { name: 'Vincenzo Montella', country: 'Italy', teams: ['Roma', 'Sampdoria', 'Fiorentina'], awards: ['Serie A'], positions: ['Forward'] },
+    { name: 'Antonio Cassano', country: 'Italy', teams: ['Roma', 'Real Madrid', 'Sampdoria', 'Milan'], awards: ['La Liga', 'Serie A'], positions: ['Forward'] },
+    { name: 'Alberto Gilardino', country: 'Italy', teams: ['Parma', 'Milan', 'Fiorentina'], awards: ['Serie A'], positions: ['Forward'] },
+    { name: 'Giampaolo Pazzini', country: 'Italy', teams: ['Fiorentina', 'Sampdoria', 'Inter Milan', 'Milan'], awards: ['Serie A'], positions: ['Forward'] },
+    { name: 'Nicola Legrottaglie', country: 'Italy', teams: ['Chievo', 'Torino', 'Juventus'], awards: ['Serie A'], positions: ['Defender'] },
+    { name: 'Jonathan Zebina', country: 'France', teams: ['Roma', 'Juventus'], awards: ['Serie A'], positions: ['Defender'] },
+    { name: 'Vikash Dhorasoo', country: 'France', teams: ['Lyon', 'Milan', 'PSG'], awards: ['Serie A', 'Ligue 1'], positions: ['Midfielder'] },
+    { name: 'Sérgio Conceição', country: 'Portugal', teams: ['Lazio', 'Inter Milan', 'Parma'], awards: ['Serie A'], positions: ['Midfielder'] },
+    { name: 'Obafemi Martins', country: 'Nigeria', teams: ['Inter Milan', 'Newcastle'], awards: ['Serie A', 'Premier League'], positions: ['Forward'] },
+    { name: 'Fredi Bobic', country: 'Germany', teams: ['VfB Stuttgart', 'Borussia Dortmund'], awards: ['Bundesliga'], positions: ['Forward'] },
+    { name: 'Arturo Vidal', country: 'Chile', teams: ['Juventus', 'Bayern Munich', 'Barcelona', 'Inter Milan'], awards: ['Serie A', 'Bundesliga', 'La Liga'], positions: ['Midfielder'] },
+    { name: 'Stephan El Shaarawy', country: 'Italy', teams: ['Milan', 'Roma', 'PSG'], awards: ['Serie A', 'Ligue 1'], positions: ['Forward'] },
+    { name: 'Mirko Vučinić', country: 'Montenegro', teams: ['Lecce', 'Roma', 'Juventus'], awards: ['Serie A'], positions: ['Forward'] },
+    { name: 'Edinson Cavani', country: 'Uruguay', teams: ['Palermo', 'Napoli', 'PSG', 'Manchester United'], awards: ['Serie A', 'Ligue 1', 'Premier League'], positions: ['Forward'] },
+    { name: 'Ezequiel Lavezzi', country: 'Argentina', teams: ['Napoli', 'PSG'], awards: ['Serie A', 'Ligue 1'], positions: ['Forward'] },
+    { name: 'Diego', country: 'Brazil', teams: ['Werder Bremen', 'Wolfsburg', 'Atletico Madrid'], awards: ['Bundesliga', 'La Liga'], positions: ['Midfielder'] },
+    { name: 'Emre', country: 'Turkey', teams: ['Inter Milan', 'Juventus', 'Newcastle', 'Liverpool'], awards: ['Serie A', 'Premier League'], positions: ['Midfielder'] },
+    // ── ADDITIONAL PREMIER LEAGUE ──────────────────────────────────────────────
+    { name: 'Dion Dublin', country: 'England', teams: ['Manchester United', 'Coventry', 'Aston Villa'], awards: ['Premier League'], positions: ['Forward'] },
+    { name: 'Les Ferdinand', country: 'England', teams: ['Newcastle', 'Tottenham'], awards: ['Premier League'], positions: ['Forward'] },
+    { name: 'Ian Wright', country: 'England', teams: ['Arsenal', 'West Ham'], awards: ['Premier League'], positions: ['Forward'] },
+    { name: 'Tony Adams', country: 'England', teams: ['Arsenal'], awards: ['Premier League'], positions: ['Defender'] },
+    { name: 'Lee Dixon', country: 'England', teams: ['Arsenal'], awards: ['Premier League'], positions: ['Defender'] },
+    { name: 'Nigel Winterburn', country: 'England', teams: ['Arsenal', 'West Ham'], awards: ['Premier League'], positions: ['Defender'] },
+    { name: 'Martin Keown', country: 'England', teams: ['Arsenal'], awards: ['Premier League'], positions: ['Defender'] },
+    { name: 'Ray Parlour', country: 'England', teams: ['Arsenal'], awards: ['Premier League'], positions: ['Midfielder'] },
+    { name: 'David Platt', country: 'England', teams: ['Arsenal', 'Aston Villa', 'Juventus'], awards: ['Premier League', 'Serie A'], positions: ['Midfielder'] },
+    { name: 'Chris Armstrong', country: 'England', teams: ['Tottenham'], awards: ['Premier League'], positions: ['Forward'] },
+    { name: 'Ruel Fox', country: 'England', teams: ['Newcastle', 'Tottenham'], awards: ['Premier League'], positions: ['Midfielder'] },
+    { name: 'Warren Barton', country: 'England', teams: ['Newcastle'], awards: ['Premier League'], positions: ['Defender'] },
+    { name: 'Darren Peacock', country: 'England', teams: ['Newcastle'], awards: ['Premier League'], positions: ['Defender'] },
+    { name: 'Steve Watson', country: 'England', teams: ['Newcastle'], awards: ['Premier League'], positions: ['Defender'] },
+    { name: 'Rob Lee', country: 'England', teams: ['Newcastle'], awards: ['Premier League'], positions: ['Midfielder'] },
+    { name: 'David Ginola', country: 'France', teams: ['Newcastle', 'Tottenham', 'Aston Villa'], awards: ['Premier League'], positions: ['Midfielder'] },
+    { name: 'Faustino Asprilla', country: 'Colombia', teams: ['Newcastle', 'Parma'], awards: ['Premier League', 'Serie A'], positions: ['Forward'] },
+    { name: 'Shay Given', country: 'Republic of Ireland', teams: ['Newcastle', 'Manchester City'], awards: ['Premier League'], positions: ['Goalkeeper'] },
+    { name: 'Nolberto Solano', country: 'Peru', teams: ['Newcastle', 'Aston Villa'], awards: ['Premier League'], positions: ['Midfielder'] },
+    { name: 'Craig Bellamy', country: 'Wales', teams: ['Newcastle', 'Liverpool', 'Manchester City'], awards: ['Premier League'], positions: ['Forward'] },
+    { name: 'Laurent Robert', country: 'France', teams: ['Newcastle'], awards: ['Premier League'], positions: ['Midfielder'] },
+    { name: 'Celestine Babayaro', country: 'Nigeria', teams: ['Newcastle', 'Chelsea'], awards: ['Premier League'], positions: ['Defender'] },
+    { name: 'Jonathan Woodgate', country: 'England', teams: ['Leeds', 'Newcastle', 'Real Madrid', 'Tottenham'], awards: ['Premier League', 'La Liga'], positions: ['Defender'] },
+    { name: 'James Milner', country: 'England', teams: ['Leeds', 'Newcastle', 'Aston Villa', 'Manchester City', 'Liverpool'], awards: ['Premier League'], positions: ['Midfielder'] },
+    { name: 'Gareth Southgate', country: 'England', teams: ['Aston Villa', 'Middlesbrough'], awards: ['Premier League'], positions: ['Defender'] },
+    { name: 'Dion Dublin', country: 'England', teams: ['Aston Villa', 'Manchester United', 'Coventry'], awards: ['Premier League'], positions: ['Forward'] },
+    { name: 'Lee Hendrie', country: 'England', teams: ['Aston Villa'], awards: ['Premier League'], positions: ['Midfielder'] },
+    { name: 'Ugo Ehiogu', country: 'England', teams: ['Aston Villa', 'Middlesbrough'], awards: ['Premier League'], positions: ['Defender'] },
+    { name: 'Paul Merson', country: 'England', teams: ['Arsenal', 'Aston Villa', 'Middlesbrough'], awards: ['Premier League'], positions: ['Midfielder'] },
+    { name: 'Stan Collymore', country: 'England', teams: ['Nottm Forest', 'Liverpool', 'Aston Villa'], awards: ['Premier League'], positions: ['Forward'] },
+    { name: 'Mark Draper', country: 'England', teams: ['Aston Villa'], awards: ['Premier League'], positions: ['Midfielder'] },
+    { name: 'Stiliyan Petrov', country: 'Bulgaria', teams: ['Celtic', 'Aston Villa'], awards: ['Premier League'], positions: ['Midfielder'] },
+    { name: 'Christian Benteke', country: 'Belgium', teams: ['Aston Villa', 'Liverpool'], awards: ['Premier League'], positions: ['Forward'] },
+    { name: 'Dennis Bergkamp', country: 'Netherlands', teams: ['Arsenal'], awards: ['Premier League'], positions: ['Forward'] },
+    { name: 'Matthew Upson', country: 'England', teams: ['Arsenal', 'Birmingham', 'West Ham'], awards: ['Premier League'], positions: ['Defender'] },
+    { name: 'Pascal Cygan', country: 'France', teams: ['Arsenal'], awards: ['Premier League'], positions: ['Defender'] },
+    { name: 'Kolo Touré', country: 'Ivory Coast', teams: ['Arsenal', 'Manchester City', 'Liverpool'], awards: ['Premier League'], positions: ['Defender'] },
+    { name: 'Jens Lehmann', country: 'Germany', teams: ['Arsenal'], awards: ['Premier League'], positions: ['Goalkeeper'] },
+    { name: 'Freddie Ljungberg', country: 'Sweden', teams: ['Arsenal'], awards: ['Premier League'], positions: ['Midfielder'] },
+  ].map(p => ({
+    id: slug(p.name),
+    name: p.name,
+    sport: 'soccer',
+    teams: p.teams,
+    awards: p.awards,
+    awardTeams: {},
+    country: p.country,
+    positions: p.positions,
+  }));
+
+  // Merge supplement into main list — API data wins if player already exists
+  const existingIds = new Set(players.map(p => p.id));
+  for (const p of supplement) {
+    if (!existingIds.has(p.id)) {
+      players.push(p);
+    }
+  }
 
   return players;
 }

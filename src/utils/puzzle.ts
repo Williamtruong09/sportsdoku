@@ -1,5 +1,5 @@
 import type { Puzzle, Sport, Criterion, GameState, CellState } from '../types';
-import { getCriteriaForSport, getPlayersForSport, playerSatisfiesCriterion } from '../data';
+import { getCriteriaForSport, getPlayersForSport, playerSatisfiesCellCriteria } from '../data';
 import { mulberry32, hashString, shuffleArray } from './seededRandom';
 
 const MAX_ATTEMPTS = 200;
@@ -31,7 +31,7 @@ function generateMixedPuzzle(dateStr: string, excludeKey?: string): Puzzle {
 
     const valid = rows.every(row =>
       cols.every(col =>
-        players.some(p => playerSatisfiesCriterion(p, row) && playerSatisfiesCriterion(p, col))
+        players.some(p => playerSatisfiesCellCriteria(p, row, col))
       )
     );
 
@@ -55,10 +55,7 @@ function isPuzzleValid(
   const players = getPlayersForSport(sport);
   for (const row of rows) {
     for (const col of cols) {
-      const valid = players.filter(
-        p => playerSatisfiesCriterion(p, row) && playerSatisfiesCriterion(p, col)
-      );
-      if (valid.length === 0) return false;
+      if (!players.some(p => playerSatisfiesCellCriteria(p, row, col))) return false;
     }
   }
   return true;

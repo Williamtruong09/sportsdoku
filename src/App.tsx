@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import type { Sport, GameState, Player, Puzzle } from './types';
 import { SPORT_CONFIGS } from './types';
-import { playerSatisfiesCriterion, getValidPlayersForCell, loadSport, isSportLoaded } from './data';
+import { playerSatisfiesCellCriteria, getValidPlayersForCell, loadSport, isSportLoaded } from './data';
 import { generatePuzzle, createInitialGameState, getTodayString, puzzleCriteriaKey } from './utils/puzzle';
 import { Header } from './components/Header';
 import { SportSelector } from './components/SportSelector';
@@ -26,7 +26,9 @@ const INITIAL_SPORT: Sport = 'nba';
 export default function App() {
   const [sport, setSport] = useState<Sport>(INITIAL_SPORT);
   const [gameState, setGameState] = useState<GameState | null>(null);
-  const [showHelp, setShowHelp] = useState(false);
+  const [showHelp, setShowHelp] = useState(() => {
+    try { return !localStorage.getItem('spordoku-seen-help'); } catch { return true; }
+  });
   const [showDonate, setShowDonate] = useState(false);
   const [lostAnimPlaying, setLostAnimPlaying] = useState(false);
   const [lastGuessWasWrong, setLastGuessWasWrong] = useState(false);
@@ -79,9 +81,7 @@ export default function App() {
         const rowCrit = prev.puzzle.rows[row];
         const colCrit = prev.puzzle.cols[col];
 
-        const isCorrect =
-          playerSatisfiesCriterion(player, rowCrit) &&
-          playerSatisfiesCriterion(player, colCrit);
+        const isCorrect = playerSatisfiesCellCriteria(player, rowCrit, colCrit);
 
         const newCells = prev.cells.map((r, ri) =>
           r.map((c, ci) => {
@@ -265,9 +265,13 @@ export default function App() {
               >
                 How to Play
               </h2>
-              <button onClick={() => setShowHelp(false)} className="text-gray-600 hover:text-white text-2xl leading-none">
+              <button onClick={() => { setShowHelp(false); try { localStorage.setItem('spordoku-seen-help', '1'); } catch {} }} className="text-gray-600 hover:text-white text-2xl leading-none">
                 ×
               </button>
+            </div>
+            <div className="mb-4 px-3 py-2 rounded" style={{ background: '#1a1a00', border: '1px solid #444400', fontSize: 11 }}>
+              <span className="text-yellow-400 font-display uppercase tracking-wider font-bold">⚠ Beta</span>
+              <span className="text-yellow-700 ml-2">App is in testing — some player names may be missing.</span>
             </div>
             <ol className="space-y-3 text-gray-400 list-decimal list-inside" style={{ fontSize: 13 }}>
               <li>Pick a sport from the tab bar.</li>

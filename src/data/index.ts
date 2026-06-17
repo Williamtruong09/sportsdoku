@@ -65,6 +65,36 @@ export function getPlayerById(id: string): Player | undefined {
   return undefined;
 }
 
+function getAwardNames(awardValue: string): string[] {
+  switch (awardValue) {
+    case 'meta:mvp': return ['MVP', 'Hart Trophy'];
+    case 'meta:finals-mvp': return ['Finals MVP', 'Super Bowl MVP', 'Conn Smythe', 'World Series MVP'];
+    case 'meta:roty': return ['Rookie of Year', 'Offensive ROY', 'Calder Trophy'];
+    case 'meta:dpoy': return ['DPOY', 'Norris Trophy'];
+    default: return [awardValue];
+  }
+}
+
+/** True if player satisfies both criteria AND, for (team + award) cells, won the award while on that team. */
+export function playerSatisfiesCellCriteria(player: Player, rowCrit: Criterion, colCrit: Criterion): boolean {
+  if (!playerSatisfiesCriterion(player, rowCrit)) return false;
+  if (!playerSatisfiesCriterion(player, colCrit)) return false;
+
+  const teamCrit = rowCrit.type === 'team' ? rowCrit : colCrit.type === 'team' ? colCrit : null;
+  const awardCrit = rowCrit.type === 'award' ? rowCrit : colCrit.type === 'award' ? colCrit : null;
+
+  if (!teamCrit || !awardCrit) return true;
+
+  const awardNames = getAwardNames(awardCrit.value);
+  const teamName = teamCrit.value;
+
+  // Only enforce the constraint if we have awardTeams data for at least one relevant award
+  const hasData = awardNames.some(a => player.awardTeams?.[a] !== undefined);
+  if (!hasData) return true; // fallback: no awardTeams data, trust the individual criterion checks
+
+  return awardNames.some(a => player.awardTeams?.[a]?.includes(teamName));
+}
+
 export function playerSatisfiesCriterion(player: Player, criterion: Criterion): boolean {
   switch (criterion.type) {
     case 'team':
@@ -101,7 +131,7 @@ export function getValidPlayersForCell(
   colCriterion: Criterion
 ): Player[] {
   return getPlayersForSport(sport).filter(
-    p => playerSatisfiesCriterion(p, rowCriterion) && playerSatisfiesCriterion(p, colCriterion)
+    p => playerSatisfiesCellCriteria(p, rowCriterion, colCriterion)
   );
 }
 
