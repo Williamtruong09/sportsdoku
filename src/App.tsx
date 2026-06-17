@@ -27,7 +27,7 @@ export default function App() {
   const [sport, setSport] = useState<Sport>(INITIAL_SPORT);
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [showHelp, setShowHelp] = useState(() => {
-    try { return !localStorage.getItem('spordoku-seen-help'); } catch { return true; }
+    try { return !sessionStorage.getItem('spordoku-seen-help'); } catch { return true; }
   });
   const [showDonate, setShowDonate] = useState(false);
   const [lostAnimPlaying, setLostAnimPlaying] = useState(false);
@@ -265,7 +265,7 @@ export default function App() {
               >
                 How to Play
               </h2>
-              <button onClick={() => { setShowHelp(false); try { localStorage.setItem('spordoku-seen-help', '1'); } catch {} }} className="text-gray-600 hover:text-white text-2xl leading-none">
+              <button onClick={() => { setShowHelp(false); try { sessionStorage.setItem('spordoku-seen-help', '1'); } catch {} }} className="text-gray-600 hover:text-white text-2xl leading-none">
                 ×
               </button>
             </div>
