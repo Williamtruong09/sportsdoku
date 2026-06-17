@@ -2137,14 +2137,14 @@ async function fetchSoccer() {
     { name: 'Daniele De Rossi',     awards: ['World Cup'] },
     { name: 'Fabio Grosso',         awards: ['World Cup'] },
 
-    // ── WORLD CUP 2002 — Brazil ──────────────────────────────────────────────
-    { name: 'Ronaldo',              awards: ['World Cup'] },
-    { name: 'Ronaldinho',           awards: ['World Cup'] },
-    { name: 'Rivaldo',              awards: ['World Cup'] },
-    { name: 'Roberto Carlos',       awards: ['World Cup'] },
-    { name: 'Gilberto Silva',       awards: ['World Cup'] },
+    // ── WORLD CUP 2002 — Brazil + Copa America 1997/1999 ────────────────────
+    { name: 'Ronaldo',              awards: ['World Cup', 'Copa America'] },  // Copa 1997, 1999
+    { name: 'Ronaldinho',           awards: ['World Cup', 'Copa America'] },  // Copa 1999
+    { name: 'Rivaldo',              awards: ['World Cup', 'Copa America'] },  // Copa 1997, 1999
+    { name: 'Roberto Carlos',       awards: ['World Cup', 'Copa America'] },  // Copa 1997, 1999
+    { name: 'Gilberto Silva',       awards: ['World Cup', 'Copa America'] },  // Copa 1999
     { name: 'Jose Kleberson',       awards: ['World Cup'] },
-    { name: 'Lúcio',                awards: ['World Cup'] },
+    { name: 'Lúcio',                awards: ['World Cup', 'Copa America'] },  // Copa 1999, 2004
     { name: 'Jose Edmilson',        awards: ['World Cup'] },
     { name: 'Jose Vitor Roque Junior', awards: ['World Cup'] },
     { name: 'Dida',                 awards: ['World Cup'] },
@@ -2162,7 +2162,7 @@ async function fetchSoccer() {
     { name: 'Richarlison',          awards: ['Copa America'] },
     { name: 'Éder Militão',         awards: ['Copa America'] },
 
-    // ── COPA AMERICA 2007 & 2004 — Brazil ────────────────────────────────────
+    // ── COPA AMERICA 2007, 2004 — Brazil ─────────────────────────────────────
     { name: 'Kaká',                 awards: ['Copa America'] },
     { name: 'Robinho',              awards: ['Copa America'] },
     { name: 'Adriano',              awards: ['Copa America'] },
@@ -2178,6 +2178,9 @@ async function fetchSoccer() {
     { name: 'Jean Beausejour',      awards: ['Copa America'] },
     { name: 'Charles Aránguiz',     awards: ['Copa America'] },
     { name: 'David Pizarro',        awards: ['Copa America'] },
+
+    // ── COPA AMERICA 1993, 1991 — Argentina ──────────────────────────────────
+    { name: 'Gabriel Batistuta',    awards: ['Copa America'] },  // 1991, 1993
 
     // ── COPA AMERICA 2011 — Uruguay ───────────────────────────────────────────
     { name: 'Luis Suárez',          awards: ['Copa America'] },
@@ -2220,17 +2223,23 @@ async function fetchSoccer() {
     { name: 'Theo Zagorakis',       awards: ['Euro'] },
     { name: 'Angelos Charisteas',   awards: ['Euro'] },
 
-    // ── EURO 2000 — France ───────────────────────────────────────────────────
-    { name: 'Zinedine Zidane',      awards: ['Euro'] },
-    { name: 'Thierry Henry',        awards: ['Euro'] },
-    { name: 'Patrick Vieira',       awards: ['Euro'] },
-    { name: 'Lilian Thuram',        awards: ['Euro'] },
-    { name: 'Marcel Desailly',      awards: ['Euro'] },
-    { name: 'Robert Pirès',         awards: ['Euro'] },
-    { name: 'David Trezeguet',      awards: ['Euro'] },
-    { name: 'Emmanuel Petit',       awards: ['Euro'] },
-    { name: 'Claude Makélélé',      awards: ['Euro'] },
-    { name: 'Sylvain Wiltord',      awards: ['Euro'] },
+    // ── WORLD CUP 1998 + EURO 2000 — France ─────────────────────────────────
+    // These players won both; ESPN stores names without accents for some
+    { name: 'Zinedine Zidane',      awards: ['Euro', 'World Cup'] },
+    { name: 'Thierry Henry',        awards: ['Euro', 'World Cup'] },
+    { name: 'Patrick Vieira',       awards: ['Euro', 'World Cup'] },
+    { name: 'Lilian Thuram',        awards: ['Euro', 'World Cup'] },
+    { name: 'Marcel Desailly',      awards: ['Euro', 'World Cup'] },
+    { name: 'Robert Pirès',         awards: ['Euro', 'World Cup'] },  // ESPN: "Robert Pires"
+    { name: 'David Trezeguet',      awards: ['Euro', 'World Cup'] },
+    { name: 'Emmanuel Petit',       awards: ['Euro', 'World Cup'] },
+    { name: 'Claude Makélélé',      awards: ['Euro', 'World Cup'] },  // ESPN: "Claude Makelele"
+    { name: 'Sylvain Wiltord',      awards: ['Euro', 'World Cup'] },
+    { name: 'Fabien Barthez',       awards: ['Euro', 'World Cup'] },
+    { name: 'Bixente Lizarazu',     awards: ['Euro', 'World Cup'] },
+    { name: 'Youri Djorkaeff',      awards: ['World Cup'] },
+    { name: 'Nicolas Anelka',       awards: ['World Cup'] },
+    { name: 'Alain Boghossian',     awards: ['World Cup'] },
 
     // ── CHAMPIONS LEAGUE 2023 — Manchester City ───────────────────────────────
     // (2022-23 season = year 2023, outside our ESPN data window)
