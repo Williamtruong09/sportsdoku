@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+﻿#!/usr/bin/env node
 /**
  * Fetches all-time historical players from official sports APIs.
  * Writes generated player arrays to src/data/generated/{sport}.ts
@@ -1303,9 +1303,22 @@ async function fetchSoccer() {
 
   const byName = new Map();       // nameSlug → {name, country, positions, teams: Set, awards: Set}
   const athleteCache = new Map(); // athleteId → profile
+  // nameId → Map<teamName, Set<year>> — tracks every (team, season) a player appeared in
+  const playerTeamYears = new Map();
 
   const YEARS = [];
   for (let y = 2003; y <= 2022; y++) YEARS.push(y);
+
+  // CL-winning team per ESPN season year (year = end of season, e.g. 2022 = 2021-22)
+  const CL_YEAR_WINNER = {
+    2003: 'Milan', 2004: 'Porto', 2005: 'Liverpool', 2006: 'Barcelona',
+    2007: 'Milan', 2008: 'Manchester United', 2009: 'Barcelona',
+    2010: 'Inter Milan', 2011: 'Barcelona', 2012: 'Chelsea',
+    2013: 'Bayern Munich', 2014: 'Real Madrid', 2015: 'Barcelona',
+    2016: 'Real Madrid', 2017: 'Real Madrid', 2018: 'Real Madrid',
+    2019: 'Liverpool', 2020: 'Bayern Munich', 2021: 'Chelsea',
+    2022: 'Real Madrid',
+  };
 
   for (const [leagueCode, leagueName] of Object.entries(ESPN_SOC_LEAGUES)) {
     let yearCount = 0;
@@ -1376,6 +1389,11 @@ async function fetchSoccer() {
             byName.get(nameId).teams.add(teamName);
             byName.get(nameId).awards.add(leagueName);
           }
+          // Record team-year for tournament award inference
+          if (!playerTeamYears.has(nameId)) playerTeamYears.set(nameId, new Map());
+          const ty = playerTeamYears.get(nameId);
+          if (!ty.has(teamName)) ty.set(teamName, new Set());
+          ty.get(teamName).add(year);
         }
       }
     }
@@ -1394,6 +1412,25 @@ async function fetchSoccer() {
     country: mapSoccerNationality(p.country),
     positions: p.positions,
   }));
+
+  // ── Automated tournament awards ─────────────────────────────────────────────
+  // Champions League: any player who was on a winning club's league roster in the winning season
+  for (const player of players) {
+    const ty = playerTeamYears.get(player.id);
+    if (!ty) continue;
+    for (const [yearStr, winner] of Object.entries(CL_YEAR_WINNER)) {
+      const year = parseInt(yearStr);
+      const yearsOnTeam = ty.get(winner);
+      if (yearsOnTeam?.has(year)) {
+        if (!player.awards.includes('Champions League')) player.awards.push('Champions League');
+        if (!player.awardTeams['Champions League']) player.awardTeams['Champions League'] = [];
+        if (!player.awardTeams['Champions League'].includes(winner)) {
+          player.awardTeams['Champions League'].push(winner);
+        }
+      }
+    }
+  }
+
 
   // Historical players not in the API's free tier — broad supplement covering major leagues 1990-2020
   const supplement = [
@@ -1970,6 +2007,289 @@ async function fetchSoccer() {
       }
       for (const award of p.awards) {
         if (!existing.awards.includes(award)) existing.awards.push(award);
+      }
+    }
+  }
+
+  // Tournament/honors supplement — covers awards the automated approach can't handle:
+  // 1. Ballon d'Or: individual award
+  // 2. Champions League 2023-2025: outside ESPN data window
+  // 3. World Cup, Copa America, Euro: precise squad-based lists (avoids over-broad nationality heuristic)
+  const TOURNAMENT_SUPPLEMENT = [
+    // ── BALLON D'OR (individual award — list all winners 2003-2023) ───────────
+    { name: 'Pavel Nedved',         awards: ["Ballon d'Or"] },
+    { name: 'Andriy Shevchenko',    awards: ["Ballon d'Or"] },
+    { name: 'Ronaldinho',           awards: ["Ballon d'Or"] },
+    { name: 'Fabio Cannavaro',      awards: ["Ballon d'Or"] },
+    { name: 'Kaka',                 awards: ["Ballon d'Or"] },
+    { name: 'Cristiano Ronaldo',    awards: ["Ballon d'Or"] },
+    { name: 'Lionel Messi',         awards: ["Ballon d'Or"] },
+    { name: 'Luka Modric',          awards: ["Ballon d'Or"] },
+    { name: 'Karim Benzema',        awards: ["Ballon d'Or"] },
+    { name: 'Rodri',                awards: ["Ballon d'Or"] },
+
+    // ── WORLD CUP 2022 — Argentina + COPA AMERICA 2021 ───────────────────────
+    { name: 'Lionel Messi',         awards: ['World Cup', 'Copa America'] },
+    { name: 'Ángel Di María',       awards: ['World Cup', 'Copa America'] },
+    { name: 'Julián Álvarez',       awards: ['World Cup'] },
+    { name: 'Lautaro Martínez',     awards: ['World Cup', 'Copa America'] },
+    { name: 'Paulo Dybala',         awards: ['World Cup', 'Copa America'] },
+    { name: 'Rodrigo De Paul',      awards: ['World Cup', 'Copa America'] },
+    { name: 'Leandro Paredes',      awards: ['World Cup', 'Copa America'] },
+    { name: 'Alexis Mac Allister',  awards: ['World Cup'] },
+    { name: 'Enzo Fernández',       awards: ['World Cup'] },
+    { name: 'Lisandro Martínez',    awards: ['World Cup'] },
+    { name: 'Cristian Romero',      awards: ['World Cup'] },
+    { name: 'Nahuel Molina',        awards: ['World Cup'] },
+    { name: 'Juan Foyth',           awards: ['World Cup'] },
+    { name: 'Exequiel Palacios',    awards: ['World Cup', 'Copa America'] },
+    { name: 'Emiliano Martínez',    awards: ['World Cup', 'Copa America'] },
+    { name: 'Marcos Acuña',         awards: ['World Cup', 'Copa America'] },
+    { name: 'Gerónimo Rulli',       awards: ['World Cup'] },
+    { name: 'Ángel Correa',         awards: ['World Cup'] },
+    { name: 'Joaquín Correa',       awards: ['World Cup', 'Copa America'] },
+    { name: 'Germán Pezzella',      awards: ['World Cup'] },
+    { name: 'Nicolás Otamendi',     awards: ['World Cup', 'Copa America'] },
+    { name: 'Giovani Lo Celso',     awards: ['World Cup', 'Copa America'] },
+    { name: 'Guido Rodríguez',      awards: ['Copa America'] },
+
+    // ── WORLD CUP 2018 — France ──────────────────────────────────────────────
+    { name: 'Hugo Lloris',          awards: ['World Cup'] },
+    { name: 'Raphaël Varane',       awards: ['World Cup'] },
+    { name: 'Benjamin Pavard',      awards: ['World Cup'] },
+    { name: 'Lucas Hernández',      awards: ['World Cup'] },
+    { name: 'Paul Pogba',           awards: ['World Cup'] },
+    { name: 'Antoine Griezmann',    awards: ['World Cup'] },
+    { name: 'Kylian Mbappé',        awards: ['World Cup'] },
+    { name: 'Olivier Giroud',       awards: ['World Cup'] },
+    { name: 'Blaise Matuidi',       awards: ['World Cup'] },
+    { name: "N'Golo Kanté",         awards: ['World Cup'] },
+    { name: 'Ousmane Dembélé',      awards: ['World Cup'] },
+    { name: 'Samuel Umtiti',        awards: ['World Cup'] },
+    { name: 'Presnel Kimpembe',     awards: ['World Cup'] },
+    { name: 'Thomas Lemar',         awards: ['World Cup'] },
+    { name: 'Corentin Tolisso',     awards: ['World Cup'] },
+    { name: 'Florian Thauvin',      awards: ['World Cup'] },
+    { name: 'Moussa Sissoko',       awards: ['World Cup'] },
+    { name: 'Djibril Sidibé',       awards: ['World Cup'] },
+    { name: 'Adil Rami',            awards: ['World Cup'] },
+
+    // ── WORLD CUP 2014 — Germany ─────────────────────────────────────────────
+    { name: 'Manuel Neuer',         awards: ['World Cup'] },
+    { name: 'Philipp Lahm',         awards: ['World Cup'] },
+    { name: 'Mats Hummels',         awards: ['World Cup'] },
+    { name: 'Jérôme Boateng',       awards: ['World Cup'] },
+    { name: 'Benedikt Höwedes',     awards: ['World Cup'] },
+    { name: 'Per Mertesacker',      awards: ['World Cup'] },
+    { name: 'Sami Khedira',         awards: ['World Cup'] },
+    { name: 'Toni Kroos',           awards: ['World Cup'] },
+    { name: 'Mesut Özil',           awards: ['World Cup'] },
+    { name: 'Thomas Müller',        awards: ['World Cup'] },
+    { name: 'Miroslav Klose',       awards: ['World Cup'] },
+    { name: 'Mario Götze',          awards: ['World Cup'] },
+    { name: 'Christoph Kramer',     awards: ['World Cup'] },
+    { name: 'Shkodran Mustafi',     awards: ['World Cup'] },
+    { name: 'Bastian Schweinsteiger', awards: ['World Cup'] },
+    { name: 'Lukas Podolski',       awards: ['World Cup'] },
+    { name: 'Julian Draxler',       awards: ['World Cup'] },
+    { name: 'Roman Weidenfeller',   awards: ['World Cup'] },
+    { name: 'Lars Bender',          awards: ['World Cup'] },
+    { name: 'André Schürrle',       awards: ['World Cup'] },
+    { name: 'Javi Martínez',        awards: ['World Cup', 'Euro'] },
+
+    // ── WORLD CUP 2010 — Spain | also Euro 2008 & 2012 ───────────────────────
+    { name: 'Iker Casillas',        awards: ['World Cup', 'Euro'] },
+    { name: 'Carles Puyol',         awards: ['World Cup', 'Euro'] },
+    { name: 'Gerard Piqué',         awards: ['World Cup', 'Euro'] },
+    { name: 'Álvaro Arbeloa',       awards: ['World Cup', 'Euro'] },
+    { name: 'Joan Capdevila',       awards: ['World Cup', 'Euro'] },
+    { name: 'Xabi Alonso',          awards: ['World Cup', 'Euro'] },
+    { name: 'Sergio Busquets',      awards: ['World Cup', 'Euro'] },
+    { name: 'Andrés Iniesta',       awards: ['World Cup', 'Euro'] },
+    { name: 'David Silva',          awards: ['World Cup', 'Euro'] },
+    { name: 'Xavi',                 awards: ['World Cup', 'Euro'] },
+    { name: 'Fernando Torres',      awards: ['World Cup', 'Euro'] },
+    { name: 'David Villa',          awards: ['World Cup'] },
+    { name: 'Jesús Navas',          awards: ['World Cup', 'Euro'] },
+    { name: 'Cesc Fàbregas',        awards: ['World Cup', 'Euro'] },
+    { name: 'Pepe Reina',           awards: ['World Cup', 'Euro'] },
+    { name: 'Víctor Valdés',        awards: ['World Cup', 'Euro'] },
+    { name: 'Fernando Llorente',    awards: ['World Cup', 'Euro'] },
+    { name: 'Pedro',                awards: ['World Cup', 'Euro'] },
+    { name: 'Sergio Ramos',         awards: ['World Cup', 'Euro'] },
+
+    // ── WORLD CUP 2006 — Italy ───────────────────────────────────────────────
+    { name: 'Gianluigi Buffon',     awards: ['World Cup'] },
+    { name: 'Fabio Cannavaro',      awards: ['World Cup'] },
+    { name: 'Alessandro Nesta',     awards: ['World Cup'] },
+    { name: 'Marco Materazzi',      awards: ['World Cup'] },
+    { name: 'Gennaro Gattuso',      awards: ['World Cup'] },
+    { name: 'Francesco Totti',      awards: ['World Cup'] },
+    { name: 'Andrea Pirlo',         awards: ['World Cup'] },
+    { name: 'Alessandro Del Piero', awards: ['World Cup'] },
+    { name: 'Filippo Inzaghi',      awards: ['World Cup'] },
+    { name: 'Luca Toni',            awards: ['World Cup'] },
+    { name: 'Simone Perrotta',      awards: ['World Cup'] },
+    { name: 'Mauro Camoranesi',     awards: ['World Cup'] },
+    { name: 'Giorgio Chiellini',    awards: ['World Cup'] },
+    { name: 'Alberto Gilardino',    awards: ['World Cup'] },
+    { name: 'Gianluca Zambrotta',   awards: ['World Cup'] },
+    { name: 'Daniele De Rossi',     awards: ['World Cup'] },
+    { name: 'Fabio Grosso',         awards: ['World Cup'] },
+
+    // ── WORLD CUP 2002 — Brazil ──────────────────────────────────────────────
+    { name: 'Ronaldo',              awards: ['World Cup'] },
+    { name: 'Ronaldinho',           awards: ['World Cup'] },
+    { name: 'Rivaldo',              awards: ['World Cup'] },
+    { name: 'Roberto Carlos',       awards: ['World Cup'] },
+    { name: 'Gilberto Silva',       awards: ['World Cup'] },
+    { name: 'Jose Kleberson',       awards: ['World Cup'] },
+    { name: 'Lúcio',                awards: ['World Cup'] },
+    { name: 'Jose Edmilson',        awards: ['World Cup'] },
+    { name: 'Jose Vitor Roque Junior', awards: ['World Cup'] },
+    { name: 'Dida',                 awards: ['World Cup'] },
+    { name: 'Juninho',              awards: ['World Cup'] },
+
+    // ── COPA AMERICA 2019 — Brazil ────────────────────────────────────────────
+    { name: 'Philippe Coutinho',    awards: ['Copa America'] },
+    { name: 'Roberto Firmino',      awards: ['Copa America'] },
+    { name: 'Gabriel Jesus',        awards: ['Copa America'] },
+    { name: 'Dani Alves',           awards: ['Copa America'] },
+    { name: 'Thiago Silva',         awards: ['Copa America'] },
+    { name: 'Marquinhos',           awards: ['Copa America'] },
+    { name: 'Casemiro',             awards: ['Copa America'] },
+    { name: 'Ederson',              awards: ['Copa America'] },
+    { name: 'Richarlison',          awards: ['Copa America'] },
+    { name: 'Éder Militão',         awards: ['Copa America'] },
+
+    // ── COPA AMERICA 2007 & 2004 — Brazil ────────────────────────────────────
+    { name: 'Kaká',                 awards: ['Copa America'] },
+    { name: 'Robinho',              awards: ['Copa America'] },
+    { name: 'Adriano',              awards: ['Copa America'] },
+    { name: 'Maicon',               awards: ['Copa America'] },
+
+    // ── COPA AMERICA 2015, 2016 — Chile ──────────────────────────────────────
+    { name: 'Alexis Sánchez',       awards: ['Copa America'] },
+    { name: 'Arturo Vidal',         awards: ['Copa America'] },
+    { name: 'Gary Medel',           awards: ['Copa America'] },
+    { name: 'Claudio Bravo',        awards: ['Copa America'] },
+    { name: 'Mauricio Isla',        awards: ['Copa America'] },
+    { name: 'Eduardo Vargas',       awards: ['Copa America'] },
+    { name: 'Jean Beausejour',      awards: ['Copa America'] },
+    { name: 'Charles Aránguiz',     awards: ['Copa America'] },
+    { name: 'David Pizarro',        awards: ['Copa America'] },
+
+    // ── COPA AMERICA 2011 — Uruguay ───────────────────────────────────────────
+    { name: 'Luis Suárez',          awards: ['Copa America'] },
+    { name: 'Diego Forlán',         awards: ['Copa America'] },
+    { name: 'Edinson Cavani',       awards: ['Copa America'] },
+    { name: 'Diego Godín',          awards: ['Copa America'] },
+    { name: 'Diego Lugano',         awards: ['Copa America'] },
+    { name: 'Fernando Muslera',     awards: ['Copa America'] },
+
+    // ── EURO 2020 — Italy ────────────────────────────────────────────────────
+    { name: 'Gianluigi Donnarumma', awards: ['Euro'] },
+    { name: 'Giorgio Chiellini',    awards: ['Euro'] },
+    { name: 'Leonardo Bonucci',     awards: ['Euro'] },
+    { name: 'Jorginho',             awards: ['Euro'] },
+    { name: 'Lorenzo Insigne',      awards: ['Euro'] },
+    { name: 'Ciro Immobile',        awards: ['Euro'] },
+    { name: 'Nicolò Barella',       awards: ['Euro'] },
+    { name: 'Marco Verratti',       awards: ['Euro'] },
+    { name: 'Federico Chiesa',      awards: ['Euro'] },
+    { name: 'Federico Bernardeschi', awards: ['Euro'] },
+    { name: 'Alessandro Florenzi',  awards: ['Euro'] },
+    { name: 'Bryan Cristante',      awards: ['Euro'] },
+    { name: 'Manuel Locatelli',     awards: ['Euro'] },
+    { name: 'Domenico Berardi',     awards: ['Euro'] },
+
+    // ── EURO 2016 — Portugal ─────────────────────────────────────────────────
+    { name: 'Cristiano Ronaldo',    awards: ['Euro'] },
+    { name: 'Rui Patrício',         awards: ['Euro'] },
+    { name: 'Pepe',                 awards: ['Euro'] },
+    { name: 'Raphaël Guerreiro',    awards: ['Euro'] },
+    { name: 'André Gomes',          awards: ['Euro'] },
+    { name: 'Renato Sanches',       awards: ['Euro'] },
+    { name: 'Nani',                 awards: ['Euro'] },
+    { name: 'João Moutinho',        awards: ['Euro'] },
+    { name: 'Ricardo Quaresma',     awards: ['Euro'] },
+    { name: 'Bruno Alves',          awards: ['Euro'] },
+
+    // ── EURO 2004 — Greece ───────────────────────────────────────────────────
+    { name: 'Georgios Karagounis',  awards: ['Euro'] },
+    { name: 'Theo Zagorakis',       awards: ['Euro'] },
+    { name: 'Angelos Charisteas',   awards: ['Euro'] },
+
+    // ── EURO 2000 — France ───────────────────────────────────────────────────
+    { name: 'Zinedine Zidane',      awards: ['Euro'] },
+    { name: 'Thierry Henry',        awards: ['Euro'] },
+    { name: 'Patrick Vieira',       awards: ['Euro'] },
+    { name: 'Lilian Thuram',        awards: ['Euro'] },
+    { name: 'Marcel Desailly',      awards: ['Euro'] },
+    { name: 'Robert Pirès',         awards: ['Euro'] },
+    { name: 'David Trezeguet',      awards: ['Euro'] },
+    { name: 'Emmanuel Petit',       awards: ['Euro'] },
+    { name: 'Claude Makélélé',      awards: ['Euro'] },
+    { name: 'Sylvain Wiltord',      awards: ['Euro'] },
+
+    // ── CHAMPIONS LEAGUE 2023 — Manchester City ───────────────────────────────
+    // (2022-23 season = year 2023, outside our ESPN data window)
+    { name: 'Erling Haaland',       awards: ['Champions League'], awardTeams: { 'Champions League': ['Manchester City'] } },
+    { name: 'Kevin De Bruyne',      awards: ['Champions League'], awardTeams: { 'Champions League': ['Manchester City'] } },
+    { name: 'Bernardo Silva',       awards: ['Champions League'], awardTeams: { 'Champions League': ['Manchester City'] } },
+    { name: 'Rodri',                awards: ['Champions League'], awardTeams: { 'Champions League': ['Manchester City'] } },
+    { name: 'Ruben Dias',           awards: ['Champions League'], awardTeams: { 'Champions League': ['Manchester City'] } },
+    { name: 'John Stones',          awards: ['Champions League'], awardTeams: { 'Champions League': ['Manchester City'] } },
+    { name: 'Kyle Walker',          awards: ['Champions League'], awardTeams: { 'Champions League': ['Manchester City'] } },
+    { name: 'Phil Foden',           awards: ['Champions League'], awardTeams: { 'Champions League': ['Manchester City'] } },
+    { name: 'Jack Grealish',        awards: ['Champions League'], awardTeams: { 'Champions League': ['Manchester City'] } },
+    { name: 'Ederson',              awards: ['Champions League'], awardTeams: { 'Champions League': ['Manchester City'] } },
+    { name: 'Ilkay Gundogan',       awards: ['Champions League'], awardTeams: { 'Champions League': ['Manchester City'] } },
+    { name: 'Riyad Mahrez',         awards: ['Champions League'], awardTeams: { 'Champions League': ['Manchester City'] } },
+    { name: 'Nathan Ake',           awards: ['Champions League'], awardTeams: { 'Champions League': ['Manchester City'] } },
+    { name: 'Manuel Akanji',        awards: ['Champions League'], awardTeams: { 'Champions League': ['Manchester City'] } },
+    { name: 'Matheus Nunes',        awards: ['Champions League'], awardTeams: { 'Champions League': ['Manchester City'] } },
+    { name: 'Rico Lewis',           awards: ['Champions League'], awardTeams: { 'Champions League': ['Manchester City'] } },
+
+    // ── CHAMPIONS LEAGUE 2024 — Real Madrid ───────────────────────────────────
+    // Most Real Madrid players already get this from the automated 2022 approach.
+    // Add only players who joined after our 2022 data window.
+    { name: 'Jude Bellingham',      awards: ['Champions League'], awardTeams: { 'Champions League': ['Real Madrid'] } },
+    { name: 'Antonio Rudiger',      awards: ['Champions League'], awardTeams: { 'Champions League': ['Real Madrid'] } },
+    { name: 'Joselu',               awards: ['Champions League'], awardTeams: { 'Champions League': ['Real Madrid'] } },
+    { name: 'Brahim Diaz',          awards: ['Champions League'], awardTeams: { 'Champions League': ['Real Madrid'] } },
+
+    // ── CHAMPIONS LEAGUE 2025 — PSG (first-ever CL title) ────────────────────
+    { name: 'Marquinhos',           awards: ['Champions League'], awardTeams: { 'Champions League': ['PSG'] } },
+    { name: 'Gianluigi Donnarumma', awards: ['Champions League'], awardTeams: { 'Champions League': ['PSG'] } },
+    { name: 'Achraf Hakimi',        awards: ['Champions League'], awardTeams: { 'Champions League': ['PSG'] } },
+    { name: 'Nuno Mendes',          awards: ['Champions League'], awardTeams: { 'Champions League': ['PSG'] } },
+    { name: 'Presnel Kimpembe',     awards: ['Champions League'], awardTeams: { 'Champions League': ['PSG'] } },
+    { name: 'Ousmane Dembele',      awards: ['Champions League'], awardTeams: { 'Champions League': ['PSG'] } },
+    { name: 'Vitinha',              awards: ['Champions League'], awardTeams: { 'Champions League': ['PSG'] } },
+    { name: 'Fabian Ruiz',          awards: ['Champions League'], awardTeams: { 'Champions League': ['PSG'] } },
+    { name: 'Warren Zaïre-Emery',   awards: ['Champions League'], awardTeams: { 'Champions League': ['PSG'] } },
+    { name: 'Desire Doue',          awards: ['Champions League'], awardTeams: { 'Champions League': ['PSG'] } },
+    { name: 'Bradley Barcola',      awards: ['Champions League'], awardTeams: { 'Champions League': ['PSG'] } },
+    { name: 'Lee Kang-in',          awards: ['Champions League'], awardTeams: { 'Champions League': ['PSG'] } },
+    { name: 'Joao Neves',           awards: ['Champions League'], awardTeams: { 'Champions League': ['PSG'] } },
+    { name: 'Randal Kolo Muani',    awards: ['Champions League'], awardTeams: { 'Champions League': ['PSG'] } },
+  ];
+
+  for (const entry of TOURNAMENT_SUPPLEMENT) {
+    const id = slug(entry.name);
+    const existing = existingById.get(id);
+    if (!existing) continue;
+    for (const award of entry.awards) {
+      if (!existing.awards.includes(award)) existing.awards.push(award);
+    }
+    if (entry.awardTeams) {
+      if (!existing.awardTeams) existing.awardTeams = {};
+      for (const [award, teams] of Object.entries(entry.awardTeams)) {
+        if (!existing.awardTeams[award]) existing.awardTeams[award] = [];
+        for (const team of teams) {
+          if (!existing.awardTeams[award].includes(team)) existing.awardTeams[award].push(team);
+        }
       }
     }
   }

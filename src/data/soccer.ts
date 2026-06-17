@@ -20,16 +20,17 @@ export const soccerCriteria: Criterion[] = [
   { id: 'team-tottenham', type: 'team', value: 'Tottenham', label: 'Tottenham', emoji: '⚪' },
   { id: 'team-ajax', type: 'team', value: 'Ajax', label: 'Ajax', emoji: '🇳🇱' },
   // Awards
-  { id: 'award-ballon-dor', type: 'award', value: 'Ballon d\'Or', label: "Ballon d'Or", emoji: '🏅' },
+  { id: 'award-ballon-dor', type: 'award', value: "Ballon d'Or", label: "Ballon d'Or", emoji: '🏅' },
   { id: 'award-world-cup', type: 'award', value: 'World Cup', label: 'World Cup', emoji: '🌍' },
   { id: 'award-champions-league', type: 'award', value: 'Champions League', label: 'Champions League', emoji: '🏆' },
+  { id: 'award-copa-america', type: 'award', value: 'Copa America', label: 'Copa América', emoji: '🌎' },
+  { id: 'award-euro', type: 'award', value: 'Euro', label: 'European Championship', emoji: '🇪🇺' },
+  // Leagues played in (stored in player awards field by the ESPN fetch)
   { id: 'award-premier-league', type: 'award', value: 'Premier League', label: 'Premier League', emoji: '🏴󠁧󠁢󠁥󠁮󠁧󠁿' },
   { id: 'award-la-liga', type: 'award', value: 'La Liga', label: 'La Liga', emoji: '🇪🇸' },
   { id: 'award-bundesliga', type: 'award', value: 'Bundesliga', label: 'Bundesliga', emoji: '🇩🇪' },
   { id: 'award-serie-a', type: 'award', value: 'Serie A', label: 'Serie A', emoji: '🇮🇹' },
   { id: 'award-ligue-1', type: 'award', value: 'Ligue 1', label: 'Ligue 1', emoji: '🇫🇷' },
-  { id: 'award-copa-america', type: 'award', value: 'Copa America', label: 'Copa América', emoji: '🌎' },
-  { id: 'award-euro', type: 'award', value: 'Euro', label: 'European Championship', emoji: '🇪🇺' },
   // Countries
   { id: 'country-argentina', type: 'country', value: 'Argentina', label: 'Argentine', emoji: '🇦🇷' },
   { id: 'country-brazil', type: 'country', value: 'Brazil', label: 'Brazilian', emoji: '🇧🇷' },

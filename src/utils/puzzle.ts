@@ -119,18 +119,31 @@ function getFallbackPuzzle(sport: Sport, dateStr: string): Puzzle {
   const teams = criteria.filter(c => c.type === 'team');
   const awards = criteria.filter(c => c.type === 'award');
 
-  const rows: [Criterion, Criterion, Criterion] = [
-    teams[0] ?? criteria[0],
-    teams[1] ?? criteria[1],
-    awards[0] ?? criteria[2],
-  ];
-  const cols: [Criterion, Criterion, Criterion] = [
-    awards[1] ?? criteria[3],
-    teams[2] ?? criteria[4],
-    awards[2] ?? criteria[5],
-  ];
+  // Linear scan: teams as rows × awards as cols, return first valid combo
+  for (let i = 0; i < teams.length - 2; i++) {
+    for (let j = i + 1; j < teams.length - 1; j++) {
+      for (let k = j + 1; k < teams.length; k++) {
+        for (let a = 0; a < awards.length - 2; a++) {
+          for (let b = a + 1; b < awards.length - 1; b++) {
+            for (let c = b + 1; c < awards.length; c++) {
+              const rows: [Criterion, Criterion, Criterion] = [teams[i], teams[j], teams[k]];
+              const cols: [Criterion, Criterion, Criterion] = [awards[a], awards[b], awards[c]];
+              if (isPuzzleValid(sport, rows, cols)) {
+                return { sport, date: dateStr, rows, cols };
+              }
+            }
+          }
+        }
+      }
+    }
+  }
 
-  return { sport, date: dateStr, rows, cols };
+  // Last resort: first 3 teams × first 3 awards (may have empty cells, but avoids crashing)
+  return {
+    sport, date: dateStr,
+    rows: [teams[0], teams[1], teams[2]] as [Criterion, Criterion, Criterion],
+    cols: [awards[0], awards[1], awards[2]] as [Criterion, Criterion, Criterion],
+  };
 }
 
 export function createInitialGameState(puzzle: Puzzle): GameState {
