@@ -36,8 +36,8 @@ export const nbaCriteria: Criterion[] = [
   { id: 'team-wizards', type: 'team', value: 'Wizards', label: 'Wizards', emoji: '🧙' },
   { id: 'team-sonics', type: 'team', value: 'Sonics', label: 'Sonics', emoji: '🎵' },
   // Awards
-  { id: 'award-mvp', type: 'award', value: 'MVP', label: 'Won MVP', emoji: '🏆' },
-  { id: 'award-finals-mvp', type: 'award', value: 'Finals MVP', label: 'Finals MVP', emoji: '🏆' },
+  { id: 'award-mvp', type: 'award', value: 'MVP', label: 'Won Season MVP', emoji: '🏆' },
+  { id: 'award-finals-mvp', type: 'award', value: 'Finals MVP', label: 'Won Finals MVP', emoji: '🥇' },
   { id: 'award-dpoy', type: 'award', value: 'DPOY', label: 'Won DPOY', emoji: '🛡️' },
   { id: 'award-roy', type: 'award', value: 'Rookie of Year', label: 'Rookie of Year', emoji: '⭐' },
   { id: 'award-all-star', type: 'award', value: 'All-Star', label: 'All-Star', emoji: '⭐' },

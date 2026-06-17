@@ -432,8 +432,8 @@ const NBA_HEADERS = {
 };
 
 const NBA_AWARD_KEYWORDS = {
-  'Most Valuable Player': 'MVP',
   'Finals Most Valuable Player': 'Finals MVP',
+  'Most Valuable Player': 'MVP',
   'Defensive Player of the Year': 'DPOY',
   'Rookie of the Year': 'Rookie of Year',
   'Sixth Man of the Year': 'Sixth Man',
@@ -574,10 +574,12 @@ async function fetchNBA() {
         const descIdx = h.indexOf('DESCRIPTION');
         for (const row of awardRS.rowSet ?? []) {
           const desc = row[descIdx] ?? '';
+          // Handle All-Star / Slam Dunk first and skip season-award matching
+          // (prevents "All-Star Most Valuable Player" from falsely mapping to MVP)
+          if (desc.includes('All-Star')) { p.awards.add('All-Star'); continue; }
+          if (desc.includes('Slam Dunk')) { p.awards.add('Slam Dunk Contest'); continue; }
           const ourAward = Object.entries(NBA_AWARD_KEYWORDS).find(([k]) => desc.includes(k))?.[1];
           if (ourAward) p.awards.add(ourAward);
-          if (desc.includes('All-Star'))  p.awards.add('All-Star');
-          if (desc.includes('Slam Dunk')) p.awards.add('Slam Dunk Contest');
         }
       }
     } catch { /* awards optional */ }

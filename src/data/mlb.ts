@@ -33,10 +33,10 @@ export const mlbCriteria: Criterion[] = [
   { id: 'team-expos', type: 'team', value: 'Expos', label: 'Expos', emoji: '🇨🇦' },
   { id: 'team-indians', type: 'team', value: 'Indians', label: 'Indians', emoji: '🪶' },
   // Awards
-  { id: 'award-mvp', type: 'award', value: 'MVP', label: 'Won MVP', emoji: '🏆' },
+  { id: 'award-mvp', type: 'award', value: 'MVP', label: 'Won Season MVP', emoji: '🏆' },
   { id: 'award-cy-young', type: 'award', value: 'Cy Young', label: 'Cy Young', emoji: '⚾' },
   { id: 'award-ws', type: 'award', value: 'World Series', label: 'World Series', emoji: '💍' },
-  { id: 'award-ws-mvp', type: 'award', value: 'World Series MVP', label: 'WS MVP', emoji: '🏆' },
+  { id: 'award-ws-mvp', type: 'award', value: 'World Series MVP', label: 'World Series MVP', emoji: '🎖️' },
   { id: 'award-roy', type: 'award', value: 'Rookie of Year', label: 'Rookie of Year', emoji: '⭐' },
   { id: 'award-gold-glove', type: 'award', value: 'Gold Glove', label: 'Gold Glove', emoji: '🥇' },
   { id: 'award-all-star', type: 'award', value: 'All-Star', label: 'All-Star', emoji: '🌟' },
