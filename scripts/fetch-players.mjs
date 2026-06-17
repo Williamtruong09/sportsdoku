@@ -153,30 +153,34 @@ async function fetchMLB() {
   console.log('\n=== MLB ===');
   const byId = new Map(); // mlbId → { name, awards, teams, positions, country }
 
-  // 1. Discover ALL players via season-by-season rosters (one request per year)
-  console.log('  Discovering all MLB players from 31 seasons...');
+  // 1. Discover ALL players via per-team rosters by season — correctly maps team per season
+  //    (sports/1/players?season=year returns wrong currentTeam — reflects today's team, not that year's)
+  const MLB_ALL_TEAM_IDS = Object.keys(MLB_TEAM_IDS).map(Number);
+  console.log(`  Discovering MLB players via per-team rosters (${MLB_ALL_TEAM_IDS.length} teams × 31 seasons)...`);
+  let mlbRostersDone = 0;
   for (let year = 1994; year <= 2024; year++) {
-    try {
-      const d = await get(
-        `${MLB_BASE}/sports/1/players?season=${year}&gameType=R`,
-        `mlb-season-players-${year}`,
-      );
-      for (const person of d.people ?? []) {
-        if (!person?.id) continue;
-        const key = String(person.id);
-        const teamName = MLB_TEAM_NAMES[person.currentTeam?.name];
-        const country = MLB_COUNTRIES[person.birthCountry] ?? person.birthCountry ?? 'USA';
-        const pos = person.primaryPosition?.abbreviation;
-        if (!byId.has(key)) {
-          byId.set(key, { name: person.fullName ?? '', awards: new Set(), teams: new Set(), positions: pos ? [pos] : [], country, awardTeams: {} });
+    for (const teamId of MLB_ALL_TEAM_IDS) {
+      try {
+        const d = await get(
+          `${MLB_BASE}/teams/${teamId}/roster?season=${year}&rosterType=active`,
+          `mlb-teamroster-${year}-${teamId}`,
+        );
+        for (const entry of d.roster ?? []) {
+          const person = entry.person;
+          if (!person?.id) continue;
+          const key = String(person.id);
+          const teamName = MLB_TEAM_IDS[teamId];
+          const pos = entry.position?.abbreviation;
+          if (!byId.has(key)) {
+            byId.set(key, { name: person.fullName ?? '', awards: new Set(), teams: new Set(), positions: pos ? [pos] : [], country: 'USA', awardTeams: {} });
+          }
+          if (teamName) byId.get(key).teams.add(teamName);
         }
-        if (teamName) byId.get(key).teams.add(teamName);
-      }
-    } catch (e) {
-      console.warn(`  ⚠ MLB season ${year}: ${e.message}`);
+        mlbRostersDone++;
+      } catch { /* invalid team/season combo */ }
     }
   }
-  console.log(`  Discovered ${byId.size} MLB players from season rosters`);
+  console.log(`  Discovered ${byId.size} MLB players from ${mlbRostersDone} team-seasons`);
 
   // 2. Add awards from award endpoints
   for (const [awardId, ourAward] of Object.entries(MLB_AWARD_IDS)) {
@@ -748,32 +752,36 @@ async function fetchNFL() {
   }
   console.log(`  Processed ${seasonsDone} award seasons, ${byId.size} players so far`);
 
-  // 2. Team roster discovery — every player on every NFL roster 1990-2023
+  // 2. Per-team stat leaders per season — returns actual historical data unlike the roster endpoint
+  //    (seasons/{year}/teams/{teamId}/athletes ignores year and returns current roster)
   const ESPN_NFL_ALL_TEAM_IDS = Object.keys(ESPN_NFL_TEAM_IDS).map(Number);
-  console.log(`  Discovering NFL players via team rosters (${ESPN_NFL_ALL_TEAM_IDS.length} teams × ${years.length} seasons)...`);
+  console.log(`  Discovering NFL players via per-team stat leaders (${ESPN_NFL_ALL_TEAM_IDS.length} teams × ${years.length} seasons)...`);
   let rostersDone = 0;
   for (const year of years) {
     for (const teamId of ESPN_NFL_ALL_TEAM_IDS) {
       try {
         const d = await get(
-          `${NFL_BASE}/seasons/${year}/teams/${teamId}/athletes?limit=200`,
-          `nfl-roster-${year}-${teamId}`,
+          `${NFL_BASE}/seasons/${year}/types/2/teams/${teamId}/leaders?limit=50`,
+          `nfl-teamleaders-${year}-${teamId}`,
         );
-        for (const item of d.items ?? []) {
-          const ref = item.$ref ?? '';
-          const pid = ref.split('/athletes/')[1]?.split('?')[0];
-          if (!pid) continue;
-          if (!byId.has(pid)) {
-            byId.set(pid, { name: '', awards: new Set(), teams: new Set(), positions: [], awardTeams: {} });
+        for (const cat of d.categories ?? []) {
+          for (const leader of cat.leaders ?? []) {
+            const athleteRef = leader.athlete?.$ref;
+            if (!athleteRef) continue;
+            const pid = athleteRef.split('/athletes/')[1]?.split('?')[0];
+            if (!pid) continue;
+            if (!byId.has(pid)) {
+              byId.set(pid, { name: '', awards: new Set(), teams: new Set(), positions: [], awardTeams: {} });
+            }
+            const teamName = ESPN_NFL_TEAM_IDS[teamId];
+            if (teamName) byId.get(pid).teams.add(teamName);
           }
-          const teamName = ESPN_NFL_TEAM_IDS[teamId];
-          if (teamName) byId.get(pid).teams.add(teamName);
         }
         rostersDone++;
       } catch { /* invalid season/team combo — silently skip */ }
     }
   }
-  console.log(`  Roster discovery: ${rostersDone} valid team-seasons, ${byId.size} players total`);
+  console.log(`  Team leaders discovery: ${rostersDone} valid team-seasons, ${byId.size} players total`);
 
   // 3. Stat leaders per season — top 25 in 10 key categories each year
   //    Gives us notable QBs, RBs, WRs, DBs, pass rushers beyond just award winners
