@@ -16,7 +16,7 @@
  *   NHL  → api-web.nhle.com          (official v1)
  *   NBA  → stats.nba.com             (unofficial, needs browser headers)
  *   NFL  → sports.core.api.espn.com  (unofficial ESPN)
- *   Soccer → api.football-data.org   (free tier – set FOOTBALL_DATA_KEY env var)
+ *   Soccer → sports.core.api.espn.com (unofficial ESPN — historical rosters 2003-2022)
  */
 
 import { writeFileSync, mkdirSync, existsSync, readFileSync } from 'fs';
@@ -856,6 +856,339 @@ async function fetchNFL() {
     }
   }
 
+  // Supplement: notable All-Pro/Pro Bowl players whose awards aren't in ESPN's awards API
+  const NFL_AP_SUPPLEMENT = [
+    // MIAMI DOLPHINS
+    { name: 'Dan Marino',        team: 'Dolphins',  awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Zach Thomas',       team: 'Dolphins',  awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Jason Taylor',      team: 'Dolphins',  awards: ['All-Pro','Pro Bowl','DPOY'] },
+    { name: 'Richmond Webb',     team: 'Dolphins',  awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Mark Clayton',      team: 'Dolphins',  awards: ['Pro Bowl'] },
+    { name: 'Mark Duper',        team: 'Dolphins',  awards: ['Pro Bowl'] },
+    { name: 'Bob Griese',        team: 'Dolphins',  awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Larry Csonka',      team: 'Dolphins',  awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Nick Buoniconti',   team: 'Dolphins',  awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Larry Little',      team: 'Dolphins',  awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Dwight Stephenson', team: 'Dolphins',  awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Paul Warfield',     team: 'Dolphins',  awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Mercury Morris',    team: 'Dolphins',  awards: ['Pro Bowl'] },
+    { name: 'Nat Moore',         team: 'Dolphins',  awards: ['Pro Bowl'] },
+    { name: 'Jim Langer',        team: 'Dolphins',  awards: ['All-Pro'] },
+    // BALTIMORE RAVENS
+    { name: 'Ray Lewis',         team: 'Ravens',    awards: ['All-Pro','Pro Bowl','DPOY'] },
+    { name: 'Ed Reed',           team: 'Ravens',    awards: ['All-Pro','Pro Bowl','DPOY'] },
+    { name: 'Jonathan Ogden',    team: 'Ravens',    awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Terrell Suggs',     team: 'Ravens',    awards: ['All-Pro','Pro Bowl','DPOY'] },
+    { name: 'Haloti Ngata',      team: 'Ravens',    awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Marshal Yanda',     team: 'Ravens',    awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Peter Boulware',    team: 'Ravens',    awards: ['Pro Bowl'] },
+    { name: 'Todd Heap',         team: 'Ravens',    awards: ['Pro Bowl'] },
+    { name: 'Ray Rice',          team: 'Ravens',    awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Jamal Lewis',       team: 'Ravens',    awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Derrick Mason',     team: 'Ravens',    awards: ['Pro Bowl'] },
+    { name: 'Chris McAlister',   team: 'Ravens',    awards: ['All-Pro','Pro Bowl'] },
+    // BUFFALO BILLS
+    { name: 'Jim Kelly',         team: 'Bills',     awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Andre Reed',        team: 'Bills',     awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Bruce Smith',       team: 'Bills',     awards: ['All-Pro','Pro Bowl','DPOY'] },
+    { name: 'Thurman Thomas',    team: 'Bills',     awards: ['All-Pro','Pro Bowl','MVP'] },
+    { name: 'Cornelius Bennett', team: 'Bills',     awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Kent Hull',         team: 'Bills',     awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Howard Ballard',    team: 'Bills',     awards: ['Pro Bowl'] },
+    { name: 'Darryl Talley',     team: 'Bills',     awards: ['Pro Bowl'] },
+    // NEW ENGLAND PATRIOTS
+    { name: 'Rob Gronkowski',    team: 'Patriots',  awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Vince Wilfork',     team: 'Patriots',  awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Darrelle Revis',    team: 'Patriots',  awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Randy Moss',        team: 'Patriots',  awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Wes Welker',        team: 'Patriots',  awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Logan Mankins',     team: 'Patriots',  awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Matt Light',        team: 'Patriots',  awards: ['Pro Bowl'] },
+    { name: 'Richard Seymour',   team: 'Patriots',  awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Mike Vrabel',       team: 'Patriots',  awards: ['Pro Bowl'] },
+    { name: 'Tedy Bruschi',      team: 'Patriots',  awards: ['Pro Bowl'] },
+    // DALLAS COWBOYS
+    { name: 'Emmitt Smith',      team: 'Cowboys',   awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Michael Irvin',     team: 'Cowboys',   awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Troy Aikman',       team: 'Cowboys',   awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Deion Sanders',     team: 'Cowboys',   awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Larry Allen',       team: 'Cowboys',   awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Jay Novacek',       team: 'Cowboys',   awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Darren Woodson',    team: 'Cowboys',   awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Erik Williams',     team: 'Cowboys',   awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Mark Stepnoski',    team: 'Cowboys',   awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Charles Haley',     team: 'Cowboys',   awards: ['All-Pro','Pro Bowl'] },
+    // PITTSBURGH STEELERS
+    { name: 'Jerome Bettis',     team: 'Steelers',  awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Troy Polamalu',     team: 'Steelers',  awards: ['All-Pro','Pro Bowl','DPOY'] },
+    { name: 'Alan Faneca',       team: 'Steelers',  awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Hines Ward',        team: 'Steelers',  awards: ['All-Pro','Pro Bowl'] },
+    { name: 'James Harrison',    team: 'Steelers',  awards: ['All-Pro','Pro Bowl','DPOY'] },
+    { name: 'Antonio Brown',     team: 'Steelers',  awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Carnell Lake',      team: 'Steelers',  awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Levon Kirkland',    team: 'Steelers',  awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Rod Woodson',       team: 'Steelers',  awards: ['All-Pro','Pro Bowl','DPOY'] },
+    { name: 'Greg Lloyd',        team: 'Steelers',  awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Dermontti Dawson',  team: 'Steelers',  awards: ['All-Pro','Pro Bowl'] },
+    // SAN FRANCISCO 49ERS
+    { name: 'Jerry Rice',        team: '49ers',     awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Steve Young',       team: '49ers',     awards: ['All-Pro','Pro Bowl','MVP'] },
+    { name: 'Joe Montana',       team: '49ers',     awards: ['All-Pro','Pro Bowl','MVP'] },
+    { name: 'Deion Sanders',     team: '49ers',     awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Patrick Willis',    team: '49ers',     awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Justin Smith',      team: '49ers',     awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Frank Gore',        team: '49ers',     awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Vernon Davis',      team: '49ers',     awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Bryant Young',      team: '49ers',     awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Garrison Hearst',   team: '49ers',     awards: ['Pro Bowl'] },
+    // GREEN BAY PACKERS
+    { name: 'Brett Favre',       team: 'Packers',   awards: ['All-Pro','Pro Bowl','MVP'] },
+    { name: 'Reggie White',      team: 'Packers',   awards: ['All-Pro','Pro Bowl','DPOY'] },
+    { name: 'Charles Woodson',   team: 'Packers',   awards: ['All-Pro','Pro Bowl','DPOY'] },
+    { name: 'Donald Driver',     team: 'Packers',   awards: ['Pro Bowl'] },
+    { name: 'LeRoy Butler',      team: 'Packers',   awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Gilbert Brown',     team: 'Packers',   awards: ['Pro Bowl'] },
+    { name: 'Antonio Freeman',   team: 'Packers',   awards: ['Pro Bowl'] },
+    { name: 'Bubba Franks',      team: 'Packers',   awards: ['Pro Bowl'] },
+    // DENVER BRONCOS
+    { name: 'John Elway',        team: 'Broncos',   awards: ['All-Pro','Pro Bowl','MVP'] },
+    { name: 'Shannon Sharpe',    team: 'Broncos',   awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Ed McCaffrey',      team: 'Broncos',   awards: ['Pro Bowl'] },
+    { name: 'Tom Nalen',         team: 'Broncos',   awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Rod Smith',         team: 'Broncos',   awards: ['Pro Bowl'] },
+    { name: 'Bill Romanowski',   team: 'Broncos',   awards: ['Pro Bowl'] },
+    { name: 'Terrell Davis',     team: 'Broncos',   awards: ['All-Pro','Pro Bowl','MVP'] },
+    { name: 'Karl Mecklenburg',  team: 'Broncos',   awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Von Miller',        team: 'Broncos',   awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Demaryius Thomas',  team: 'Broncos',   awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Champ Bailey',      team: 'Broncos',   awards: ['All-Pro','Pro Bowl'] },
+    // NEW YORK GIANTS
+    { name: 'Lawrence Taylor',   team: 'Giants',    awards: ['All-Pro','Pro Bowl','DPOY','MVP'] },
+    { name: 'Michael Strahan',   team: 'Giants',    awards: ['All-Pro','Pro Bowl','DPOY'] },
+    { name: 'Eli Manning',       team: 'Giants',    awards: ['Pro Bowl'] },
+    { name: 'Amani Toomer',      team: 'Giants',    awards: ['Pro Bowl'] },
+    { name: 'Jeremy Shockey',    team: 'Giants',    awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Plaxico Burress',   team: 'Giants',    awards: ['Pro Bowl'] },
+    { name: 'Tiki Barber',       team: 'Giants',    awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Jessie Armstead',   team: 'Giants',    awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Osi Umenyiora',     team: 'Giants',    awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Justin Tuck',       team: 'Giants',    awards: ['All-Pro','Pro Bowl'] },
+    // CHICAGO BEARS
+    { name: 'Brian Urlacher',    team: 'Bears',     awards: ['All-Pro','Pro Bowl','DPOY'] },
+    { name: 'Mike Brown',        team: 'Bears',     awards: ['Pro Bowl'] },
+    { name: 'Olin Kreutz',       team: 'Bears',     awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Tommie Harris',     team: 'Bears',     awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Lance Briggs',      team: 'Bears',     awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Devin Hester',      team: 'Bears',     awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Walter Payton',     team: 'Bears',     awards: ['All-Pro','Pro Bowl','MVP'] },
+    { name: 'Mike Singletary',   team: 'Bears',     awards: ['All-Pro','Pro Bowl','DPOY'] },
+    { name: 'Richard Dent',      team: 'Bears',     awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Jim McMahon',       team: 'Bears',     awards: ['Pro Bowl'] },
+    // MINNESOTA VIKINGS
+    { name: 'Cris Carter',       team: 'Vikings',   awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Randy Moss',        team: 'Vikings',   awards: ['All-Pro','Pro Bowl'] },
+    { name: 'John Randle',       team: 'Vikings',   awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Randall McDaniel',  team: 'Vikings',   awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Gary Zimmerman',    team: 'Vikings',   awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Daunte Culpepper',  team: 'Vikings',   awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Mewelde Moore',     team: 'Vikings',   awards: ['Pro Bowl'] },
+    { name: 'Adrian Peterson',   team: 'Vikings',   awards: ['All-Pro','Pro Bowl','MVP'] },
+    { name: 'Chad Greenway',     team: 'Vikings',   awards: ['Pro Bowl'] },
+    // KANSAS CITY CHIEFS
+    { name: 'Patrick Mahomes',   team: 'Chiefs',    awards: ['All-Pro','Pro Bowl','MVP','Super Bowl MVP'] },
+    { name: 'Travis Kelce',      team: 'Chiefs',    awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Tyreek Hill',       team: 'Chiefs',    awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Chris Jones',       team: 'Chiefs',    awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Derrick Thomas',    team: 'Chiefs',    awards: ['All-Pro','Pro Bowl','DPOY'] },
+    { name: 'Will Shields',      team: 'Chiefs',    awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Tony Gonzalez',     team: 'Chiefs',    awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Priest Holmes',     team: 'Chiefs',    awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Jamaal Charles',    team: 'Chiefs',    awards: ['All-Pro','Pro Bowl'] },
+    // SEATTLE SEAHAWKS
+    { name: 'Marshawn Lynch',    team: 'Seahawks',  awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Richard Sherman',   team: 'Seahawks',  awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Earl Thomas',       team: 'Seahawks',  awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Kam Chancellor',    team: 'Seahawks',  awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Russell Wilson',    team: 'Seahawks',  awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Bobby Wagner',      team: 'Seahawks',  awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Steve Largent',     team: 'Seahawks',  awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Walter Jones',      team: 'Seahawks',  awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Cortez Kennedy',    team: 'Seahawks',  awards: ['All-Pro','Pro Bowl','DPOY'] },
+    // LOS ANGELES RAMS
+    { name: 'Orlando Pace',      team: 'Rams',      awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Isaac Bruce',       team: 'Rams',      awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Torry Holt',        team: 'Rams',      awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Marshall Faulk',    team: 'Rams',      awards: ['All-Pro','Pro Bowl','MVP'] },
+    { name: 'Kurt Warner',       team: 'Rams',      awards: ['All-Pro','Pro Bowl','MVP'] },
+    { name: 'London Fletcher',   team: 'Rams',      awards: ['Pro Bowl'] },
+    { name: 'Aaron Donald',      team: 'Rams',      awards: ['All-Pro','Pro Bowl','DPOY'] },
+    { name: 'Cooper Kupp',       team: 'Rams',      awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Jalen Ramsey',      team: 'Rams',      awards: ['All-Pro','Pro Bowl'] },
+    // PHILADELPHIA EAGLES
+    { name: 'Donovan McNabb',    team: 'Eagles',    awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Brian Westbrook',   team: 'Eagles',    awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Reggie White',      team: 'Eagles',    awards: ['All-Pro','Pro Bowl','DPOY'] },
+    { name: 'Seth Joyner',       team: 'Eagles',    awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Tra Thomas',        team: 'Eagles',    awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Fletcher Cox',      team: 'Eagles',    awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Lane Johnson',      team: 'Eagles',    awards: ['All-Pro','Pro Bowl'] },
+    // INDIANAPOLIS COLTS
+    { name: 'Peyton Manning',    team: 'Colts',     awards: ['All-Pro','Pro Bowl','MVP'] },
+    { name: 'Marvin Harrison',   team: 'Colts',     awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Reggie Wayne',      team: 'Colts',     awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Dallas Clark',      team: 'Colts',     awards: ['Pro Bowl'] },
+    { name: 'Dwight Freeney',    team: 'Colts',     awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Robert Mathis',     team: 'Colts',     awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Jeff Saturday',     team: 'Colts',     awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Tarik Glenn',       team: 'Colts',     awards: ['All-Pro','Pro Bowl'] },
+    // NEW ORLEANS SAINTS
+    { name: 'Drew Brees',        team: 'Saints',    awards: ['All-Pro','Pro Bowl','Super Bowl MVP'] },
+    { name: 'Marques Colston',   team: 'Saints',    awards: ['Pro Bowl'] },
+    { name: 'Jimmy Graham',      team: 'Saints',    awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Roman Harper',      team: 'Saints',    awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Will Smith',        team: 'Saints',    awards: ['Pro Bowl'] },
+    // ATLANTA FALCONS
+    { name: 'Matt Ryan',         team: 'Falcons',   awards: ['All-Pro','Pro Bowl','MVP'] },
+    { name: 'Julio Jones',       team: 'Falcons',   awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Michael Turner',    team: 'Falcons',   awards: ['Pro Bowl'] },
+    { name: 'Roddy White',       team: 'Falcons',   awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Warrick Dunn',      team: 'Falcons',   awards: ['Pro Bowl'] },
+    { name: 'Jamal Anderson',    team: 'Falcons',   awards: ['Pro Bowl'] },
+    { name: 'Tony Gonzalez',     team: 'Falcons',   awards: ['All-Pro','Pro Bowl'] },
+    // CAROLINA PANTHERS
+    { name: 'Steve Smith',       team: 'Panthers',  awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Jonathan Stewart',  team: 'Panthers',  awards: ['Pro Bowl'] },
+    { name: 'Julius Peppers',    team: 'Panthers',  awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Luke Kuechly',      team: 'Panthers',  awards: ['All-Pro','Pro Bowl','DPOY'] },
+    { name: 'Cam Newton',        team: 'Panthers',  awards: ['All-Pro','Pro Bowl','MVP','Offensive ROY'] },
+    { name: 'Greg Olsen',        team: 'Panthers',  awards: ['All-Pro','Pro Bowl'] },
+    // TAMPA BAY BUCCANEERS
+    { name: 'Derrick Brooks',    team: 'Buccaneers',awards: ['All-Pro','Pro Bowl','DPOY'] },
+    { name: 'Warren Sapp',       team: 'Buccaneers',awards: ['All-Pro','Pro Bowl','DPOY'] },
+    { name: 'Ronde Barber',      team: 'Buccaneers',awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Mike Alstott',      team: 'Buccaneers',awards: ['All-Pro','Pro Bowl'] },
+    { name: 'John Lynch',        team: 'Buccaneers',awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Mike Evans',        team: 'Buccaneers',awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Rob Gronkowski',    team: 'Buccaneers',awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Lavonte David',     team: 'Buccaneers',awards: ['All-Pro','Pro Bowl'] },
+    // ARIZONA CARDINALS
+    { name: 'Larry Fitzgerald',  team: 'Cardinals', awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Anquan Boldin',     team: 'Cardinals', awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Adrian Wilson',     team: 'Cardinals', awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Bertrand Berry',    team: 'Cardinals', awards: ['Pro Bowl'] },
+    { name: 'Kurt Warner',       team: 'Cardinals', awards: ['All-Pro','Pro Bowl','MVP'] },
+    { name: 'Patrick Peterson',  team: 'Cardinals', awards: ['All-Pro','Pro Bowl'] },
+    // CINCINNATI BENGALS
+    { name: 'Chad Johnson',      team: 'Bengals',   awards: ['All-Pro','Pro Bowl'] },
+    { name: 'T.J. Houshmandzadeh', team: 'Bengals', awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Corey Dillon',      team: 'Bengals',   awards: ['Pro Bowl'] },
+    { name: 'Willie Anderson',   team: 'Bengals',   awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Andrew Whitworth',  team: 'Bengals',   awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Joe Burrow',        team: 'Bengals',   awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Ja\'Marr Chase',    team: 'Bengals',   awards: ['All-Pro','Pro Bowl','Offensive ROY'] },
+    { name: 'Tee Higgins',       team: 'Bengals',   awards: ['Pro Bowl'] },
+    // CLEVELAND BROWNS
+    { name: 'Joe Thomas',        team: 'Browns',    awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Josh Cribbs',       team: 'Browns',    awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Nick Chubb',        team: 'Browns',    awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Myles Garrett',     team: 'Browns',    awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Ozzie Newsome',     team: 'Browns',    awards: ['All-Pro','Pro Bowl'] },
+    // HOUSTON TEXANS
+    { name: 'Andre Johnson',     team: 'Texans',    awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Arian Foster',      team: 'Texans',    awards: ['All-Pro','Pro Bowl'] },
+    { name: 'J.J. Watt',         team: 'Texans',    awards: ['All-Pro','Pro Bowl','DPOY'] },
+    { name: 'DeAndre Hopkins',   team: 'Texans',    awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Brian Cushing',     team: 'Texans',    awards: ['All-Pro','Pro Bowl','Offensive ROY'] },
+    // JACKSONVILLE JAGUARS
+    { name: 'Fred Taylor',       team: 'Jaguars',   awards: ['Pro Bowl'] },
+    { name: 'Mark Brunell',      team: 'Jaguars',   awards: ['Pro Bowl'] },
+    { name: 'Tony Boselli',      team: 'Jaguars',   awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Jimmy Smith',       team: 'Jaguars',   awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Keenan McCardell',  team: 'Jaguars',   awards: ['Pro Bowl'] },
+    { name: 'Kevin Hardy',       team: 'Jaguars',   awards: ['Pro Bowl'] },
+    { name: 'Josh Allen',        team: 'Jaguars',   awards: ['All-Pro','Pro Bowl'] },
+    // TENNESSEE TITANS
+    { name: 'Steve McNair',      team: 'Titans',    awards: ['All-Pro','Pro Bowl','MVP'] },
+    { name: 'Eddie George',      team: 'Titans',    awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Derrick Henry',     team: 'Titans',    awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Bruce Matthews',    team: 'Titans',    awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Keith Bulluck',     team: 'Titans',    awards: ['Pro Bowl'] },
+    // LAS VEGAS RAIDERS
+    { name: 'Jerry Rice',        team: 'Raiders',   awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Charles Woodson',   team: 'Raiders',   awards: ['All-Pro','Pro Bowl','Offensive ROY'] },
+    { name: 'Tim Brown',         team: 'Raiders',   awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Rich Gannon',       team: 'Raiders',   awards: ['All-Pro','Pro Bowl','MVP'] },
+    { name: 'Howie Long',        team: 'Raiders',   awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Bo Jackson',        team: 'Raiders',   awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Marcus Allen',      team: 'Raiders',   awards: ['All-Pro','Pro Bowl','MVP'] },
+    { name: 'Rod Woodson',       team: 'Raiders',   awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Sebastian Janikowski', team: 'Raiders', awards: ['Pro Bowl'] },
+    // LOS ANGELES CHARGERS
+    { name: 'LaDainian Tomlinson', team: 'Chargers', awards: ['All-Pro','Pro Bowl','MVP'] },
+    { name: 'Philip Rivers',     team: 'Chargers',  awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Antonio Gates',     team: 'Chargers',  awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Keenan Allen',      team: 'Chargers',  awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Junior Seau',       team: 'Chargers',  awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Eric Weddle',       team: 'Chargers',  awards: ['All-Pro','Pro Bowl'] },
+    // DETROIT LIONS
+    { name: 'Calvin Johnson',    team: 'Lions',     awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Barry Sanders',     team: 'Lions',     awards: ['All-Pro','Pro Bowl','MVP'] },
+    { name: 'Herman Moore',      team: 'Lions',     awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Lomas Brown',       team: 'Lions',     awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Chris Spielman',    team: 'Lions',     awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Amon-Ra St. Brown', team: 'Lions',     awards: ['All-Pro','Pro Bowl'] },
+    // NEW YORK JETS
+    { name: 'Wayne Chrebet',     team: 'Jets',      awards: ['Pro Bowl'] },
+    { name: 'Curtis Martin',     team: 'Jets',      awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Keyshawn Johnson',  team: 'Jets',      awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Darrelle Revis',    team: 'Jets',      awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Nick Mangold',      team: 'Jets',      awards: ['All-Pro','Pro Bowl'] },
+    { name: 'D\'Brickashaw Ferguson', team: 'Jets', awards: ['Pro Bowl'] },
+    { name: 'Mo Lewis',          team: 'Jets',      awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Marvin Jones',      team: 'Jets',      awards: ['Pro Bowl'] },
+    // WASHINGTON COMMANDERS
+    { name: 'Art Monk',          team: 'Redskins',  awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Darrell Green',     team: 'Redskins',  awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Mark Rypien',       team: 'Redskins',  awards: ['All-Pro','Pro Bowl','Super Bowl MVP'] },
+    { name: 'Dexter Manley',     team: 'Redskins',  awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Ken Harvey',        team: 'Redskins',  awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Clinton Portis',    team: 'Redskins',  awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Santana Moss',      team: 'Redskins',  awards: ['Pro Bowl'] },
+    // GREEN BAY PACKERS (more)
+    { name: 'Sterling Sharpe',   team: 'Packers',   awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Mark Chmura',       team: 'Packers',   awards: ['Pro Bowl'] },
+    // BALTIMORE RAVENS (more)
+    { name: 'Matt Birk',         team: 'Ravens',    awards: ['All-Pro','Pro Bowl'] },
+    // PITTSBURGH STEELERS (more)
+    { name: 'Ben Roethlisberger',team: 'Steelers',  awards: ['All-Pro','Pro Bowl'] },
+    { name: 'Le\'Veon Bell',     team: 'Steelers',  awards: ['All-Pro','Pro Bowl'] },
+  ];
+
+  for (const entry of NFL_AP_SUPPLEMENT) {
+    const id = slug(entry.name);
+    const existing = players.find(p => p.id === id);
+    if (existing) {
+      // Merge awards and awardTeams into existing player
+      for (const award of entry.awards) {
+        if (!existing.awards.includes(award)) existing.awards.push(award);
+        if (!existing.awardTeams[award]) existing.awardTeams[award] = [];
+        if (!existing.awardTeams[award].includes(entry.team)) existing.awardTeams[award].push(entry.team);
+        if (!existing.teams.includes(entry.team)) existing.teams.push(entry.team);
+      }
+    } else {
+      players.push({
+        id,
+        name: entry.name,
+        sport: 'nfl',
+        teams: [entry.team],
+        awards: entry.awards,
+        awardTeams: Object.fromEntries(entry.awards.map(a => [a, [entry.team]])),
+        country: 'USA',
+        positions: [],
+      });
+    }
+  }
+
   return players;
 }
 
@@ -873,113 +1206,192 @@ function mapNFLAward(name) {
 
 // ─── Soccer ───────────────────────────────────────────────────────────────────
 
-const FOOTBALL_DATA_KEY = process.env.FOOTBALL_DATA_KEY ?? '';
-const FD_BASE = 'https://api.football-data.org/v4';
+const ESPN_SOC_BASE = 'https://sports.core.api.espn.com/v2/sports/soccer';
 
-const FD_LEAGUES = {
-  PL: 'Premier League', PD: 'La Liga', BL1: 'Bundesliga',
-  SA: 'Serie A', FL1: 'Ligue 1', CL: 'Champions League', WC: 'World Cup',
+const ESPN_SOC_LEAGUES = {
+  'eng.1': 'Premier League',
+  'esp.1': 'La Liga',
+  'ger.1': 'Bundesliga',
+  'ita.1': 'Serie A',
+  'fra.1': 'Ligue 1',
 };
 
-const SOCCER_TEAM_NAMES = {
-  'Manchester City FC': 'Manchester City', 'Arsenal FC': 'Arsenal',
-  'Chelsea FC': 'Chelsea', 'Liverpool FC': 'Liverpool',
-  'Manchester United FC': 'Manchester United', 'Tottenham Hotspur FC': 'Tottenham',
-  'FC Barcelona': 'Barcelona', 'Real Madrid CF': 'Real Madrid',
-  'Club Atlético de Madrid': 'Atletico Madrid', 'FC Bayern München': 'Bayern Munich',
-  'Borussia Dortmund': 'Borussia Dortmund', 'Juventus FC': 'Juventus',
-  'AC Milan': 'Milan', 'FC Internazionale Milano': 'Inter Milan',
-  'Paris Saint-Germain FC': 'PSG', 'Ajax Amsterdam': 'Ajax',
-  'SL Benfica': 'Benfica', 'Real Madrid': 'Real Madrid',
-  'Barcelona': 'Barcelona', 'Bayern Munich': 'Bayern Munich',
+// Maps ESPN displayName → internal team name where they differ
+const ESPN_SOC_TEAM_MAP = {
+  // Premier League oddities
+  'Tottenham Hotspur': 'Tottenham', 'Spurs': 'Tottenham',
+  'Manchester City': 'Manchester City', 'Man City': 'Manchester City',
+  'Manchester United': 'Manchester United', 'Man United': 'Manchester United',
+  'West Ham United': 'West Ham',
+  'Newcastle United': 'Newcastle',
+  'Blackburn Rovers': 'Blackburn',
+  'Leicester City': 'Leicester',
+  'Leeds United': 'Leeds',
+  'Wolverhampton Wanderers': 'Wolverhampton',
+  'Birmingham City': 'Birmingham',
+  'Stoke City': 'Stoke',
+  'Wigan Athletic': 'Wigan',
+  'Bolton Wanderers': 'Bolton',
+  // La Liga
+  'Atlético Madrid': 'Atletico Madrid',
+  'Atletico de Madrid': 'Atletico Madrid',
+  'Club Atletico de Madrid': 'Atletico Madrid',
+  'Valencia CF': 'Valencia',
+  'Sevilla FC': 'Sevilla',
+  'Villarreal CF': 'Villarreal',
+  'Deportivo de La Coruna': 'Deportivo',
+  'RC Deportivo': 'Deportivo',
+  'Deportivo La Coruña': 'Deportivo',
+  'Málaga CF': 'Malaga', 'Malaga CF': 'Malaga',
+  'RCD Espanyol': 'Espanyol',
+  'RC Celta de Vigo': 'Celta Vigo', 'Celta Vigo': 'Celta Vigo',
+  'Athletic Club': 'Athletic Bilbao',
+  'Real Sociedad': 'Real Sociedad',
+  'Real Zaragoza': 'Real Zaragoza',
+  // Bundesliga
+  'FC Bayern Munich': 'Bayern Munich', 'Bayern München': 'Bayern Munich',
+  'Bayern Munich': 'Bayern Munich',
+  'Bayer 04 Leverkusen': 'Bayer Leverkusen',
+  'FC Schalke 04': 'Schalke', 'Schalke 04': 'Schalke',
+  'SV Werder Bremen': 'Werder Bremen',
+  'Hamburger SV': 'Hamburg', 'HSV Hamburg': 'Hamburg',
+  'Borussia Mönchengladbach': 'Borussia Mönchengladbach',
+  'Eintracht Frankfurt': 'Eintracht Frankfurt',
+  'TSG 1899 Hoffenheim': 'Hoffenheim',
+  'VfL Wolfsburg': 'Wolfsburg',
+  'RB Leipzig': 'RB Leipzig',
+  '1. FC Köln': 'Cologne',
+  // Serie A
+  'AC Milan': 'Milan',
+  'Internazionale': 'Inter Milan', 'FC Internazionale Milano': 'Inter Milan',
+  'AS Roma': 'Roma',
+  'SSC Napoli': 'Napoli',
+  'ACF Fiorentina': 'Fiorentina',
+  'SS Lazio': 'Lazio',
+  'Parma Calcio 1913': 'Parma', 'Parma Calcio': 'Parma',
+  'Atalanta BC': 'Atalanta',
+  'Torino FC': 'Torino',
+  'Udinese Calcio': 'Udinese',
+  'UC Sampdoria': 'Sampdoria',
+  'AC ChievoVerona': 'Chievo', 'ChievoVerona': 'Chievo',
+  'Bologna FC 1909': 'Bologna',
+  'Cagliari Calcio': 'Cagliari',
+  // Ligue 1
+  'Paris Saint-Germain': 'PSG', 'Paris Saint-Germain FC': 'PSG',
+  'Olympique Lyonnais': 'Lyon',
+  'AS Monaco FC': 'Monaco', 'AS Monaco': 'Monaco',
+  'Olympique de Marseille': 'Marseille',
+  'LOSC Lille': 'Lille',
+  'OGC Nice': 'Nice',
+  'Stade Rennais FC': 'Rennes', 'Stade Rennais': 'Rennes',
+  'FC Girondins de Bordeaux': 'Bordeaux', 'Girondins de Bordeaux': 'Bordeaux',
+  'AJ Auxerre': 'Auxerre',
+  'RC Lens': 'Lens',
+  'Montpellier HSC': 'Montpellier',
+  'Toulouse FC': 'Toulouse',
+  'Stade de Reims': 'Reims',
+  // Dutch (Ajax is in criteria)
+  'Ajax Amsterdam': 'Ajax',
 };
+
+function normalizeSoccerTeam(display) {
+  return ESPN_SOC_TEAM_MAP[display] ?? display;
+}
 
 async function fetchSoccer() {
-  console.log('\n=== Soccer ===');
+  console.log('\n=== Soccer (ESPN) ===');
 
-  if (!FOOTBALL_DATA_KEY) {
-    console.warn('  ⚠ FOOTBALL_DATA_KEY not set. Get a free key at https://www.football-data.org/client/register');
-    console.warn('  Then run: FOOTBALL_DATA_KEY=your_key node scripts/fetch-players.mjs soccer');
-    console.warn('  Skipping soccer fetch — keeping existing hand-crafted data.');
-    return null;
-  }
+  const byName = new Map();       // nameSlug → {name, country, positions, teams: Set, awards: Set}
+  const athleteCache = new Map(); // athleteId → profile
 
-  const fdHeaders = { 'X-Auth-Token': FOOTBALL_DATA_KEY };
-  const byId = new Map();
+  const YEARS = [];
+  for (let y = 2003; y <= 2022; y++) YEARS.push(y);
 
-  const LEAGUE_IDS = ['PL', 'PD', 'BL1', 'SA', 'FL1']; // major domestic leagues
-  const SEASONS = [];
-  for (let y = 2000; y <= 2024; y++) SEASONS.push(y);
-
-  // 1. Top scorers across multiple seasons (gives us goal-scorers / star attackers)
-  console.log(`  Fetching top scorers (${LEAGUE_IDS.length} leagues × ${SEASONS.length} seasons)...`);
-  for (const leagueId of LEAGUE_IDS) {
-    const leagueName = FD_LEAGUES[leagueId];
-    for (const season of SEASONS) {
+  for (const [leagueCode, leagueName] of Object.entries(ESPN_SOC_LEAGUES)) {
+    let yearCount = 0;
+    for (const year of YEARS) {
+      let teamsData;
       try {
-        const d = await get(
-          `${FD_BASE}/competitions/${leagueId}/scorers?limit=20&season=${season}`,
-          `soccer-scorers-${leagueId}-${season}`,
-          fdHeaders,
+        teamsData = await get(
+          `${ESPN_SOC_BASE}/leagues/${leagueCode}/seasons/${year}/teams?limit=30`,
+          `espn-soc-teams-${leagueCode}-${year}`,
         );
-        for (const entry of d.scorers ?? []) {
-          const p = entry.player;
-          if (!p?.id) continue;
-          const key = String(p.id);
-          if (!byId.has(key)) {
-            byId.set(key, { name: p.name, nationality: p.nationality ?? 'Unknown', awards: new Set(), teams: new Set(), positions: [mapSoccerPos(p.position)].filter(Boolean), awardTeams: {} });
+      } catch { continue; }
+
+      if (!teamsData.items?.length) continue;
+      yearCount++;
+
+      for (const teamItem of teamsData.items) {
+        const teamId = teamItem.$ref?.match(/teams\/(\d+)/)?.[1];
+        if (!teamId) continue;
+
+        let teamName;
+        try {
+          const teamData = await get(
+            `${ESPN_SOC_BASE}/leagues/${leagueCode}/teams/${teamId}`,
+            `espn-soc-team-${leagueCode}-${teamId}`,
+          );
+          teamName = normalizeSoccerTeam(teamData.displayName);
+        } catch { continue; }
+
+        let rosterData;
+        try {
+          rosterData = await get(
+            `${ESPN_SOC_BASE}/leagues/${leagueCode}/seasons/${year}/teams/${teamId}/athletes?limit=60`,
+            `espn-soc-roster-${leagueCode}-${year}-${teamId}`,
+          );
+        } catch { continue; }
+
+        for (const playerItem of rosterData.items ?? []) {
+          const athleteId = playerItem.$ref?.match(/athletes\/(\d+)/)?.[1];
+          if (!athleteId) continue;
+
+          if (!athleteCache.has(athleteId)) {
+            try {
+              const profile = await get(
+                `${ESPN_SOC_BASE}/athletes/${athleteId}`,
+                `espn-soc-athlete-${athleteId}`,
+              );
+              athleteCache.set(athleteId, {
+                name: profile.displayName ?? '',
+                country: profile.citizenship ?? profile.birthCountry ?? 'Unknown',
+                position: mapSoccerPos(profile.position?.abbreviation),
+              });
+            } catch { continue; }
           }
-          byId.get(key).awards.add(leagueName);
-          const t = SOCCER_TEAM_NAMES[entry.team?.name] ?? entry.team?.shortName;
-          if (t) byId.get(key).teams.add(t);
+
+          const profile = athleteCache.get(athleteId);
+          if (!profile?.name) continue;
+
+          const nameId = slug(profile.name);
+          if (!byName.has(nameId)) {
+            byName.set(nameId, {
+              name: profile.name,
+              country: profile.country,
+              positions: profile.position ? [profile.position] : [],
+              teams: new Set([teamName]),
+              awards: new Set([leagueName]),
+            });
+          } else {
+            byName.get(nameId).teams.add(teamName);
+            byName.get(nameId).awards.add(leagueName);
+          }
         }
-      } catch (e) {
-        console.warn(`  ⚠ Soccer scorers ${leagueId} ${season}: ${e.message}`);
       }
     }
+    console.log(`  ${leagueName}: ${yearCount} seasons`);
   }
-  console.log(`  After scorers: ${byId.size} players`);
 
-  // 2. Full team squads per season — captures historical players (Iniesta, Xavi, Puyol etc.)
-  console.log(`  Fetching team squads (${LEAGUE_IDS.length} leagues × ${SEASONS.length} seasons)...`);
-  for (const leagueId of LEAGUE_IDS) {
-    const leagueName = FD_LEAGUES[leagueId];
-    for (const season of SEASONS) {
-    try {
-      const d = await get(
-        `${FD_BASE}/competitions/${leagueId}/teams?season=${season}`,
-        `soccer-teams-${leagueId}-${season}`,
-        fdHeaders,
-      );
-      let added = 0;
-      for (const team of d.teams ?? []) {
-        const teamShort = SOCCER_TEAM_NAMES[team.name] ?? team.shortName ?? team.tla;
-        for (const player of team.squad ?? []) {
-          if (!player.id) continue;
-          const key = String(player.id);
-          if (!byId.has(key)) {
-            byId.set(key, { name: player.name, nationality: player.nationality ?? 'Unknown', awards: new Set(), teams: new Set(), positions: [mapSoccerPos(player.position)].filter(Boolean), awardTeams: {} });
-            added++;
-          }
-          byId.get(key).awards.add(leagueName);
-          if (teamShort) byId.get(key).teams.add(teamShort);
-        }
-      }
-    } catch (e) {
-      console.warn(`  ⚠ Soccer teams ${leagueId} ${season}: ${e.message}`);
-    }
-    } // end season loop
-  }
-  console.log(`  After squads: ${byId.size} total players`);
+  console.log(`  ESPN athletes collected: ${byName.size}`);
 
-  const players = [...byId.values()].map(p => ({
+  const players = [...byName.values()].map(p => ({
     id: slug(p.name),
     name: p.name,
     sport: 'soccer',
     teams: [...p.teams],
     awards: [...p.awards],
     awardTeams: {},
-    country: mapSoccerNationality(p.nationality),
+    country: mapSoccerNationality(p.country),
     positions: p.positions,
   }));
 
@@ -1077,7 +1489,7 @@ async function fetchSoccer() {
     { name: 'Edwin van der Sar', country: 'Netherlands', teams: ['Ajax', 'Manchester United'], awards: ['Premier League'], positions: ['Goalkeeper'] },
     { name: 'Patrick Kluivert', country: 'Netherlands', teams: ['Ajax', 'Barcelona'], awards: ['La Liga'], positions: ['Forward'] },
     { name: 'Dennis Bergkamp', country: 'Netherlands', teams: ['Ajax', 'Arsenal'], awards: ['Premier League'], positions: ['Forward'] },
-    { name: 'Marc Overmars', country: 'Netherlands', teams: ['Arsenal'], awards: ['Premier League'], positions: ['Midfielder'] },
+    { name: 'Marc Overmars', country: 'Netherlands', teams: ['Ajax', 'Arsenal'], awards: ['Premier League'], positions: ['Midfielder'] },
     { name: 'Clarence Seedorf', country: 'Netherlands', teams: ['Ajax', 'Real Madrid', 'Inter Milan', 'Milan'], awards: ['La Liga', 'Serie A'], positions: ['Midfielder'] },
     { name: 'Edgar Davids', country: 'Netherlands', teams: ['Ajax', 'Juventus', 'Milan', 'Barcelona'], awards: ['La Liga', 'Serie A'], positions: ['Midfielder'] },
     { name: 'Phillip Cocu', country: 'Netherlands', teams: ['PSV', 'Barcelona'], awards: ['La Liga'], positions: ['Midfielder'] },
@@ -1210,7 +1622,7 @@ async function fetchSoccer() {
     { name: 'Martin Petrov', country: 'Bulgaria', teams: ['Manchester City'], awards: ['Premier League'], positions: ['Midfielder'] },
     { name: 'Nicolas Bendtner', country: 'Denmark', teams: ['Arsenal'], awards: ['Premier League'], positions: ['Forward'] },
     { name: 'Gael Clichy', country: 'France', teams: ['Arsenal', 'Manchester City'], awards: ['Premier League'], positions: ['Defender'] },
-    { name: 'Thomas Vermaelen', country: 'Belgium', teams: ['Arsenal', 'Barcelona'], awards: ['Premier League', 'La Liga'], positions: ['Defender'] },
+    { name: 'Thomas Vermaelen', country: 'Belgium', teams: ['Ajax', 'Arsenal', 'Barcelona'], awards: ['Premier League', 'La Liga'], positions: ['Defender'] },
     { name: 'Tomas Rosický', country: 'Czech Republic', teams: ['Borussia Dortmund', 'Arsenal'], awards: ['Bundesliga', 'Premier League'], positions: ['Midfielder'] },
     { name: 'Mikel Arteta', country: 'Spain', teams: ['Everton', 'Arsenal'], awards: ['Premier League'], positions: ['Midfielder'] },
     { name: 'Alex Song', country: 'Cameroon', teams: ['Arsenal', 'Barcelona'], awards: ['Premier League', 'La Liga'], positions: ['Midfielder'] },
@@ -1304,7 +1716,7 @@ async function fetchSoccer() {
     // ── BELGIUM ────────────────────────────────────────────────────────────────
     { name: 'Eden Hazard', country: 'Belgium', teams: ['Chelsea', 'Real Madrid'], awards: ['Premier League', 'La Liga'], positions: ['Midfielder'] },
     { name: 'Vincent Kompany', country: 'Belgium', teams: ['Manchester City'], awards: ['Premier League'], positions: ['Defender'] },
-    { name: 'Thomas Vermaelen', country: 'Belgium', teams: ['Arsenal', 'Barcelona'], awards: ['Premier League', 'La Liga'], positions: ['Defender'] },
+    { name: 'Luis Suárez', country: 'Uruguay', teams: ['Ajax', 'Liverpool', 'Barcelona', 'Atletico Madrid'], awards: ['Premier League', 'La Liga'], positions: ['Forward'] },
     { name: 'Marouane Fellaini', country: 'Belgium', teams: ['Everton', 'Manchester United'], awards: ['Premier League'], positions: ['Midfielder'] },
     { name: 'Jan Vertonghen', country: 'Belgium', teams: ['Ajax', 'Tottenham', 'Benfica'], awards: ['Premier League'], positions: ['Defender'] },
     { name: 'Toby Alderweireld', country: 'Belgium', teams: ['Ajax', 'Atletico Madrid', 'Tottenham'], awards: ['Premier League', 'La Liga'], positions: ['Defender'] },
@@ -1348,6 +1760,55 @@ async function fetchSoccer() {
     { name: 'Hidetoshi Nakata', country: 'Japan', teams: ['Perugia', 'Roma', 'Parma', 'Bolton'], awards: ['Serie A', 'Premier League'], positions: ['Midfielder'] },
     { name: 'Shunsuke Nakamura', country: 'Japan', teams: ['Celtic', 'Espanyol'], awards: ['La Liga'], positions: ['Midfielder'] },
     { name: 'Junichi Inamoto', country: 'Japan', teams: ['Arsenal', 'West Brom'], awards: ['Premier League'], positions: ['Midfielder'] },
+    // ── MODERN SUPERSTARS (not in free API tier) ───────────────────────────────
+    { name: 'Lionel Messi', country: 'Argentina', teams: ['Barcelona', 'PSG', 'Inter Miami'], awards: ['La Liga', 'Ligue 1'], positions: ['Forward'] },
+    { name: 'Cristiano Ronaldo', country: 'Portugal', teams: ['Manchester United', 'Real Madrid', 'Juventus'], awards: ['Premier League', 'La Liga', 'Serie A'], positions: ['Forward'] },
+    { name: 'Neymar', country: 'Brazil', teams: ['Barcelona', 'PSG'], awards: ['La Liga', 'Ligue 1'], positions: ['Forward'] },
+    { name: 'Antoine Griezmann', country: 'France', teams: ['Atletico Madrid', 'Barcelona'], awards: ['La Liga'], positions: ['Forward'] },
+    { name: 'Karim Benzema', country: 'France', teams: ['Real Madrid', 'Lyon'], awards: ['La Liga', 'Ligue 1'], positions: ['Forward'] },
+    { name: 'Sergio Ramos', country: 'Spain', teams: ['Real Madrid', 'PSG', 'Sevilla'], awards: ['La Liga', 'Ligue 1'], positions: ['Defender'] },
+    { name: 'Andrés Guardado', country: 'Mexico', teams: ['Deportivo', 'Valencia', 'Real Betis'], awards: ['La Liga'], positions: ['Midfielder'] },
+    { name: 'Ivan Perišić', country: 'Croatia', teams: ['Borussia Dortmund', 'Inter Milan', 'Tottenham', 'Bayern Munich'], awards: ['Bundesliga', 'Serie A', 'Premier League'], positions: ['Midfielder'] },
+    { name: 'Radamel Falcao', country: 'Colombia', teams: ['Porto', 'Atletico Madrid', 'Monaco', 'Manchester United', 'Chelsea'], awards: ['La Liga', 'Ligue 1', 'Premier League', 'Primeira Liga'], positions: ['Forward'] },
+    { name: 'Diego Costa', country: 'Spain', teams: ['Atletico Madrid', 'Chelsea'], awards: ['La Liga', 'Premier League'], positions: ['Forward'] },
+    { name: 'Angel Di Maria', country: 'Argentina', teams: ['Benfica', 'Real Madrid', 'Manchester United', 'PSG', 'Juventus'], awards: ['La Liga', 'Premier League', 'Ligue 1', 'Serie A', 'Primeira Liga'], positions: ['Midfielder'] },
+    { name: 'Gonzalo Higuain', country: 'Argentina', teams: ['Real Madrid', 'Napoli', 'Juventus', 'Milan', 'Chelsea'], awards: ['La Liga', 'Serie A', 'Premier League'], positions: ['Forward'] },
+    { name: 'David De Gea', country: 'Spain', teams: ['Manchester United'], awards: ['Premier League'], positions: ['Goalkeeper'] },
+    { name: 'Manuel Neuer', country: 'Germany', teams: ['Schalke', 'Bayern Munich'], awards: ['Bundesliga'], positions: ['Goalkeeper'] },
+    { name: 'Toni Kroos', country: 'Germany', teams: ['Bayern Munich', 'Real Madrid'], awards: ['Bundesliga', 'La Liga'], positions: ['Midfielder'] },
+    { name: 'Isco', country: 'Spain', teams: ['Real Madrid', 'Malaga', 'Sevilla'], awards: ['La Liga'], positions: ['Midfielder'] },
+    { name: 'Raphael Varane', country: 'France', teams: ['Real Madrid', 'Manchester United'], awards: ['La Liga', 'Premier League'], positions: ['Defender'] },
+    { name: 'Marcelo', country: 'Brazil', teams: ['Real Madrid'], awards: ['La Liga'], positions: ['Defender'] },
+    { name: 'Luka Modrić', country: 'Croatia', teams: ['Tottenham', 'Real Madrid'], awards: ['Premier League', 'La Liga'], positions: ['Midfielder'] },
+    { name: 'Casemiro', country: 'Brazil', teams: ['Real Madrid', 'Manchester United'], awards: ['La Liga', 'Premier League'], positions: ['Midfielder'] },
+    { name: 'Paulo Dybala', country: 'Argentina', teams: ['Palermo', 'Juventus', 'Roma'], awards: ['Serie A'], positions: ['Forward'] },
+    { name: 'Ciro Immobile', country: 'Italy', teams: ['Torino', 'Borussia Dortmund', 'Lazio', 'Sevilla'], awards: ['Serie A', 'Bundesliga', 'La Liga'], positions: ['Forward'] },
+    { name: 'Lorenzo Insigne', country: 'Italy', teams: ['Napoli'], awards: ['Serie A'], positions: ['Forward'] },
+    { name: 'Kevin De Bruyne', country: 'Belgium', teams: ['Chelsea', 'Wolfsburg', 'Manchester City'], awards: ['Premier League', 'Bundesliga'], positions: ['Midfielder'] },
+    { name: 'Mo Salah', country: 'Egypt', teams: ['Chelsea', 'Roma', 'Liverpool'], awards: ['Premier League', 'Serie A'], positions: ['Forward'] },
+    { name: 'Sadio Mané', country: 'Senegal', teams: ['Southampton', 'Liverpool', 'Bayern Munich'], awards: ['Premier League', 'Bundesliga'], positions: ['Forward'] },
+    { name: 'Roberto Firmino', country: 'Brazil', teams: ['Hoffenheim', 'Liverpool'], awards: ['Premier League', 'Bundesliga'], positions: ['Forward'] },
+    { name: 'Virgil van Dijk', country: 'Netherlands', teams: ['Celtic', 'Southampton', 'Liverpool'], awards: ['Premier League'], positions: ['Defender'] },
+    { name: 'Alisson Becker', country: 'Brazil', teams: ['Roma', 'Liverpool'], awards: ['Premier League', 'Serie A'], positions: ['Goalkeeper'] },
+    { name: 'Jordan Henderson', country: 'England', teams: ['Sunderland', 'Liverpool'], awards: ['Premier League'], positions: ['Midfielder'] },
+    { name: 'Raheem Sterling', country: 'England', teams: ['Liverpool', 'Manchester City', 'Chelsea'], awards: ['Premier League'], positions: ['Midfielder'] },
+    { name: 'Bernardo Silva', country: 'Portugal', teams: ['Monaco', 'Manchester City'], awards: ['Premier League', 'Ligue 1'], positions: ['Midfielder'] },
+    { name: 'Leroy Sané', country: 'Germany', teams: ['Schalke', 'Manchester City', 'Bayern Munich'], awards: ['Premier League', 'Bundesliga'], positions: ['Midfielder'] },
+    { name: 'Harry Kane', country: 'England', teams: ['Tottenham', 'Bayern Munich'], awards: ['Premier League', 'Bundesliga'], positions: ['Forward'] },
+    { name: 'Son Heung-min', country: 'South Korea', teams: ['Hamburg', 'Bayer Leverkusen', 'Tottenham'], awards: ['Premier League', 'Bundesliga'], positions: ['Forward'] },
+    { name: 'Dele Alli', country: 'England', teams: ['MK Dons', 'Tottenham', 'Everton'], awards: ['Premier League'], positions: ['Midfielder'] },
+    { name: 'Christian Eriksen', country: 'Denmark', teams: ['Ajax', 'Tottenham', 'Inter Milan', 'Manchester United'], awards: ['Premier League', 'Serie A'], positions: ['Midfielder'] },
+    { name: 'N\'Golo Kanté', country: 'France', teams: ['Leicester', 'Chelsea'], awards: ['Premier League'], positions: ['Midfielder'] },
+    { name: 'Riyad Mahrez', country: 'Algeria', teams: ['Leicester', 'Manchester City'], awards: ['Premier League'], positions: ['Midfielder'] },
+    { name: 'Jamie Vardy', country: 'England', teams: ['Leicester'], awards: ['Premier League'], positions: ['Forward'] },
+    { name: 'Alexis Sánchez', country: 'Chile', teams: ['Arsenal', 'Manchester United', 'Inter Milan'], awards: ['Premier League', 'Serie A'], positions: ['Forward'] },
+    { name: 'Pierre-Emerick Aubameyang', country: 'Gabon', teams: ['Borussia Dortmund', 'Arsenal', 'Barcelona', 'Chelsea', 'Marseille'], awards: ['Bundesliga', 'Premier League', 'La Liga', 'Ligue 1'], positions: ['Forward'] },
+    { name: 'Robert Lewandowski', country: 'Poland', teams: ['Borussia Dortmund', 'Bayern Munich', 'Barcelona'], awards: ['Bundesliga', 'La Liga'], positions: ['Forward'] },
+    { name: 'Thomas Müller', country: 'Germany', teams: ['Bayern Munich'], awards: ['Bundesliga'], positions: ['Forward'] },
+    { name: 'Joshua Kimmich', country: 'Germany', teams: ['Bayern Munich'], awards: ['Bundesliga'], positions: ['Midfielder'] },
+    { name: 'Leon Goretzka', country: 'Germany', teams: ['Schalke', 'Bayern Munich'], awards: ['Bundesliga'], positions: ['Midfielder'] },
+    { name: 'Kingsley Coman', country: 'France', teams: ['Juventus', 'Bayern Munich'], awards: ['Bundesliga', 'Serie A'], positions: ['Midfielder'] },
+    { name: 'Serge Gnabry', country: 'Germany', teams: ['Arsenal', 'Werder Bremen', 'Bayern Munich'], awards: ['Premier League', 'Bundesliga'], positions: ['Midfielder'] },
     // ── REAL MADRID / BARCELONA ADDITIONAL ─────────────────────────────────────
     { name: 'Fernando Morientes', country: 'Spain', teams: ['Real Madrid', 'Monaco', 'Liverpool'], awards: ['La Liga', 'Premier League', 'Ligue 1'], positions: ['Forward'] },
     { name: 'Guti', country: 'Spain', teams: ['Real Madrid'], awards: ['La Liga'], positions: ['Midfielder'] },
@@ -1494,11 +1955,22 @@ async function fetchSoccer() {
     positions: p.positions,
   }));
 
-  // Merge supplement into main list — API data wins if player already exists
-  const existingIds = new Set(players.map(p => p.id));
+  // Merge supplement: add new players and enrich existing ones with supplement teams/awards
+  const existingById = new Map(players.map(p => [p.id, p]));
   for (const p of supplement) {
-    if (!existingIds.has(p.id)) {
-      players.push(p);
+    const id = slug(p.name);
+    if (!existingById.has(id)) {
+      const newPlayer = { ...p, id, sport: 'soccer', awardTeams: {} };
+      players.push(newPlayer);
+      existingById.set(id, newPlayer);
+    } else {
+      const existing = existingById.get(id);
+      for (const team of p.teams) {
+        if (!existing.teams.includes(team)) existing.teams.push(team);
+      }
+      for (const award of p.awards) {
+        if (!existing.awards.includes(award)) existing.awards.push(award);
+      }
     }
   }
 
@@ -1507,23 +1979,28 @@ async function fetchSoccer() {
 
 function mapSoccerPos(pos) {
   if (!pos) return null;
-  if (pos === 'GOALKEEPER') return 'Goalkeeper';
-  if (pos === 'DEFENCE') return 'Defender';
-  if (pos === 'MIDFIELD') return 'Midfielder';
-  if (['OFFENCE', 'FORWARD', 'ATTACKER'].includes(pos)) return 'Forward';
-  return pos;
+  const p = pos.toUpperCase();
+  if (p === 'G' || p === 'GK' || p === 'GOALKEEPER') return 'Goalkeeper';
+  if (p === 'D' || p === 'DF' || p === 'CB' || p === 'LB' || p === 'RB' || p === 'DEFENCE') return 'Defender';
+  if (p === 'M' || p === 'MF' || p === 'AM' || p === 'DM' || p === 'CM' || p === 'MIDFIELD') return 'Midfielder';
+  if (p === 'F' || p === 'FW' || p === 'ST' || p === 'LW' || p === 'RW' || p === 'OFFENCE' || p === 'FORWARD' || p === 'ATTACKER') return 'Forward';
+  return null;
 }
 
 function mapSoccerNationality(nat) {
-  const map = {
-    'England': 'England', 'Spain': 'Spain', 'Germany': 'Germany',
-    'France': 'France', 'Brazil': 'Brazil', 'Argentina': 'Argentina',
-    'Portugal': 'Portugal', 'Netherlands': 'Netherlands', 'Italy': 'Italy',
-    'Belgium': 'Belgium', 'Croatia': 'Croatia', 'Norway': 'Norway',
-    'Poland': 'Poland', 'Sweden': 'Sweden', 'Denmark': 'Denmark',
-    'Austria': 'Austria', 'Morocco': 'Morocco', 'Senegal': 'Senegal',
+  if (!nat) return 'Unknown';
+  const norm = {
+    'Czechia': 'Czech Republic',
+    'Korea Republic': 'South Korea',
+    'Korea, Republic of': 'South Korea',
+    'United States': 'USA',
+    'United States of America': 'USA',
+    "Cote d'Ivoire": 'Ivory Coast',
+    "Côte d'Ivoire": 'Ivory Coast',
+    'Congo DR': 'DR Congo',
+    'Bosnia & Herzegovina': 'Bosnia and Herzegovina',
   };
-  return map[nat] ?? nat ?? 'Unknown';
+  return norm[nat] ?? nat;
 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
