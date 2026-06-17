@@ -334,7 +334,7 @@ async function fetchNHL() {
             if (!player.id) continue;
             const pid = String(player.id);
             if (!byId.has(pid)) {
-              byId.set(pid, { name: '', awards: new Set(), teams: new Set(), positions: [], country: 'Canada' });
+              byId.set(pid, { name: '', awards: new Set(), teams: new Set(), positions: [], country: 'Canada', awardTeams: {} });
             }
           }
         }
