@@ -144,7 +144,7 @@ describe('puzzle generation', () => {
         if (allValid) return;
       }
       // Report which cells failed for the last date tried
-      const puzzle = generatePuzzle(sport, TEST_DATES.at(-1)!);
+      const puzzle = generatePuzzle(sport, TEST_DATES[TEST_DATES.length - 1]);
       for (const row of puzzle.rows) {
         for (const col of puzzle.cols) {
           const count = players.filter(p => playerSatisfiesCellCriteria(p, row, col)).length;
